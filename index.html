@@ -1030,11 +1030,16 @@
     <p id="precioInsumoName" style="font-weight:600;margin-bottom:16px;font-size:14px"></p>
     <div class="form-grid">
       <div class="form-group">
-        <label class="form-label">Precio actual</label>
-        <input class="form-input" id="precioActual" type="number" readonly style="opacity:0.5">
+        <label class="form-label" style="display:flex;align-items:center;gap:6px">
+          Precio anterior
+          <span style="font-size:10px;color:var(--accent);font-weight:600;background:rgba(245,166,35,0.1);padding:2px 6px;border-radius:4px">editable</span>
+        </label>
+        <input class="form-input" id="precioActual" type="number" placeholder="0.00"
+          style="border-color:rgba(245,166,35,0.3)"
+          title="Podés editar manualmente el precio anterior">
       </div>
       <div class="form-group">
-        <label class="form-label">Nuevo precio</label>
+        <label class="form-label">Precio nuevo</label>
         <input class="form-input" id="precioNuevo" type="number" placeholder="0.00">
       </div>
       <div class="form-group">
@@ -1731,7 +1736,8 @@ function openPrecioModal(id) {
   if(!ins) return;
   state.precioEditId = id;
   document.getElementById('precioInsumoName').textContent = ins.nombre + ' — ' + ins.sucursal;
-  document.getElementById('precioActual').value = getPrice(ins, state.activeMes) || '';
+  const precioActualVal = getPrice(ins, state.activeMes) || getLastKnownPrice(ins, state.activeMes) || '';
+  document.getElementById('precioActual').value = precioActualVal;
   document.getElementById('precioNuevo').value = '';
   document.getElementById('precioObs').value = '';
   document.getElementById('precioProveedor').value = ins.proveedor || '';
@@ -1748,8 +1754,21 @@ function confirmPrecio() {
   const proveedor = document.getElementById('precioProveedor').value.trim();
   const obs = document.getElementById('precioObs').value.trim();
   if(!ins || isNaN(nuevo)) { toast('Ingresá un precio válido', 'error'); return; }
-  const anterior = getPrice(ins, mes) || getLastKnownPrice(ins, mes);
-  setPrice(ins, mes, nuevo, obs);
+  // Use manually entered anterior if provided, otherwise auto-detect
+  const anteriorInput = parseFloat(document.getElementById('precioActual').value);
+  const anterior = !isNaN(anteriorInput) ? anteriorInput : (getPrice(ins, mes) || getLastKnownPrice(ins, mes));
+  // Always store the anterior on the insumo and in historial
+  if(anterior !== null && anterior !== undefined && !isNaN(anterior)) {
+    ins.precioAnterior = anterior;
+    // Also save it in previous month slot if not already there
+    const mesPrevIdx = state.meses.indexOf(mes) - 1;
+    if(mesPrevIdx >= 0) {
+      const mesPrev = state.meses[mesPrevIdx];
+      if(!ins.precios[mesPrev]) ins.precios[mesPrev] = anterior;
+    }
+  }
+  addHistEntry(ins, mes, anterior, nuevo, obs);
+  ins.precios[mes] = nuevo;
   if(proveedor) ins.proveedor = proveedor;
   saveState();
   closeModal('precioModal');

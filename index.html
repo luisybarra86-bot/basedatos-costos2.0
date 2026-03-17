@@ -926,9 +926,14 @@
       </div>
       <div class="form-group">
         <label class="form-label">Categoría</label>
-        <select class="form-input" id="mCategoria">
+        <select class="form-input" id="mCategoria" onchange="handleCatChange(this)">
           <option value="">Seleccionar...</option>
         </select>
+        <div id="newCatRow" style="display:none; display:none; flex-direction:row; gap:6px; margin-top:6px;">
+          <input class="form-input" id="newCatInput" placeholder="Nueva categoría..." style="flex:1; text-transform:uppercase;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="confirmNewCat()">+ Agregar</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="cancelNewCat()">✕</button>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Sucursal</label>
@@ -1332,15 +1337,59 @@ function refreshCatSelects() {
     const el = document.getElementById(id);
     if(!el) return;
     const cur = el.value;
-    if(id === 'mCategoria') el.innerHTML = '<option value="">Seleccionar...</option>';
-    else el.innerHTML = '<option value="">Todas las categorías</option>';
-    cats.forEach(c => {
-      const o = document.createElement('option');
-      o.value = c; o.textContent = c;
-      el.appendChild(o);
-    });
-    if(cur) el.value = cur;
+    if(id === 'mCategoria') {
+      el.innerHTML = '<option value="">Seleccionar...</option>';
+      cats.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        el.appendChild(o);
+      });
+      // Add "nueva categoría" option at the bottom
+      const oNew = document.createElement('option');
+      oNew.value = '__nueva__'; oNew.textContent = '+ Nueva categoría...';
+      oNew.style.color = 'var(--accent)'; oNew.style.fontWeight = '600';
+      el.appendChild(oNew);
+    } else {
+      el.innerHTML = '<option value="">Todas las categorías</option>';
+      cats.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c; o.textContent = c;
+        el.appendChild(o);
+      });
+    }
+    if(cur && cur !== '__nueva__') el.value = cur;
   });
+}
+
+function handleCatChange(sel) {
+  const row = document.getElementById('newCatRow');
+  if(sel.value === '__nueva__') {
+    row.style.display = 'flex';
+    document.getElementById('newCatInput').focus();
+  } else {
+    row.style.display = 'none';
+  }
+}
+
+function confirmNewCat() {
+  const val = document.getElementById('newCatInput').value.trim().toUpperCase();
+  if(!val) { toast('Escribí el nombre de la categoría', 'error'); return; }
+  if(state.categorias.includes(val)) { toast('Esa categoría ya existe', 'info'); }
+  else {
+    state.categorias.push(val);
+    saveState();
+    toast('Categoría "'+val+'" agregada ✓', 'success');
+  }
+  refreshCatSelects();
+  document.getElementById('mCategoria').value = val;
+  document.getElementById('newCatRow').style.display = 'none';
+  document.getElementById('newCatInput').value = '';
+}
+
+function cancelNewCat() {
+  document.getElementById('newCatRow').style.display = 'none';
+  document.getElementById('newCatInput').value = '';
+  document.getElementById('mCategoria').value = '';
 }
 
 // ═══════════════════════════════════════════
@@ -1607,6 +1656,7 @@ function saveInsumo() {
   const nombre = document.getElementById('mNombre').value.trim();
   const categoria = document.getElementById('mCategoria').value;
   const sucursal = document.getElementById('mSucursal').value;
+  if(categoria === '__nueva__') { toast('Confirmá la nueva categoría antes de guardar', 'error'); return; }
   const precio = parseFloat(document.getElementById('mPrecio').value);
   const mes = document.getElementById('mMes').value;
   const proveedor = document.getElementById('mProveedor').value.trim();

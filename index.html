@@ -891,16 +891,18 @@
           <thead><tr>
             <th>A — Insumo</th>
             <th>B — Categoría</th>
-            <th>C — Precio</th>
+            <th>C — Precio nuevo</th>
             <th>D — Proveedor</th>
             <th>E — Observaciones</th>
+            <th>F — Unidad</th>
+            <th>G — Precio anterior <span style='color:var(--accent)'>(opcional)</span></th>
           </tr></thead>
           <tbody>
             <tr>
-              <td>Carne (Kgs)</td><td>CARNES</td><td>11950</td><td>-</td><td></td>
+              <td>Carne (Kgs)</td><td>CARNES</td><td>11950</td><td>-</td><td></td><td>kg</td><td>10950</td>
             </tr>
             <tr>
-              <td>Pan Golden (und)</td><td>PANES</td><td>435.6</td><td>-</td><td></td>
+              <td>Pan Golden (und)</td><td>PANES</td><td>435.6</td><td>-</td><td></td><td>und</td><td>396</td>
             </tr>
           </tbody>
         </table>
@@ -1591,7 +1593,7 @@ function renderTable() {
   } else {
     tbody.innerHTML = paged.map(i => {
       const cur = getPrice(i, mes);
-      const prv = prev ? getPrice(i, prev) : null;
+      const prv = (prev ? getPrice(i, prev) : null) || getLastKnownPrice(i, mes);
       const trend = getTrend(prv, cur);
       const diff = pct(prv, cur);
       const sucCls = i.sucursal === 'LENO' ? 'leno' : i.sucursal === 'VIANDAS' ? 'viandas' : '';
@@ -1696,12 +1698,7 @@ function saveInsumo() {
     const oldPrice = getPrice(ins, mes);
     ins.nombre = nombre; ins.categoria = categoria; ins.sucursal = sucursal;
     ins.unidad = unidad; ins.proveedor = proveedor; ins.obs = obs;
-    if(!isNaN(precio)) {
-      if(ins.precios[mes] !== precio) {
-        addHistEntry(ins, mes, ins.precios[mes], precio);
-      }
-      ins.precios[mes] = precio;
-    }
+    if(!isNaN(precio)) setPrice(ins, mes, precio);
     toast('Insumo actualizado', 'success');
   } else {
     const nuevo = { id: uid(), nombre, categoria, sucursal, unidad, precios: {}, proveedor, obs };
@@ -1751,9 +1748,8 @@ function confirmPrecio() {
   const proveedor = document.getElementById('precioProveedor').value.trim();
   const obs = document.getElementById('precioObs').value.trim();
   if(!ins || isNaN(nuevo)) { toast('Ingresá un precio válido', 'error'); return; }
-  const anterior = getPrice(ins, mes);
-  addHistEntry(ins, mes, anterior, nuevo, obs);
-  ins.precios[mes] = nuevo;
+  const anterior = getPrice(ins, mes) || getLastKnownPrice(ins, mes);
+  setPrice(ins, mes, nuevo, obs);
   if(proveedor) ins.proveedor = proveedor;
   saveState();
   closeModal('precioModal');
@@ -1761,6 +1757,39 @@ function confirmPrecio() {
   renderDashboard();
   const trend = getTrend(anterior, nuevo);
   toast(trend==='up' ? '▲ Precio aumentado' : trend==='down' ? '▼ Precio bajó' : 'Precio actualizado', trend==='up'?'error':trend==='down'?'success':'info');
+}
+
+// Returns the last recorded price for an insumo across all months (excluding current)
+// Also checks historial for the most recent price before current mes
+function getLastKnownPrice(ins, currentMes) {
+  // 1. Check historial entries for this insumo — get most recent precioAnterior
+  const histEntries = state.historial.filter(h => h.insumoId === ins.id);
+  if(histEntries.length) {
+    // Return the precioAnterior of the most recent entry
+    return histEntries[histEntries.length - 1].precioAnterior || histEntries[histEntries.length - 1].precioNuevo;
+  }
+
+  // 2. Check ins.precioAnterior (stored directly on the object when price was overwritten)
+  if(ins.precioAnterior !== undefined && ins.precioAnterior !== null) return ins.precioAnterior;
+
+  // 3. Walk months in order and return last price before currentMes
+  let lastPrice = null;
+  for(const m of state.meses) {
+    if(m === currentMes) break;
+    if(ins.precios[m] !== undefined && ins.precios[m] !== null) lastPrice = ins.precios[m];
+  }
+  return lastPrice;
+}
+
+// Central price update: always persists precioAnterior on the insumo object
+function setPrice(ins, mes, nuevo, obs='') {
+  const anterior = ins.precios[mes] !== undefined && ins.precios[mes] !== null
+    ? ins.precios[mes]
+    : getLastKnownPrice(ins, mes);
+  // Always store precioAnterior directly on the insumo so it survives even without historial
+  if(anterior !== null && anterior !== undefined) ins.precioAnterior = anterior;
+  if(anterior !== nuevo) addHistEntry(ins, mes, anterior, nuevo, obs);
+  ins.precios[mes] = nuevo;
 }
 
 function addHistEntry(ins, mes, anterior, nuevo, obs='') {
@@ -2067,14 +2096,25 @@ function confirmImport() {
     let ins = state.insumos.find(i => i.nombre.toLowerCase() === nombre.toLowerCase() && i.sucursal === suc);
     if(ins) {
       if(!isNaN(precio) && ins.precios[mes] !== precio) {
-        addHistEntry(ins, mes, ins.precios[mes], precio);
-        ins.precios[mes] = precio;
+        setPrice(ins, mes, precio);
         updated++;
       }
       if(proveedor) ins.proveedor = proveedor;
     } else {
-      const nuevo = { id: uid(), nombre, categoria: categoria || 'SIN CATEGORÍA', sucursal: suc, precios: {}, proveedor, obs };
-      if(!isNaN(precio)) nuevo.precios[mes] = precio;
+      const unidadImp = String(r[5]||'').trim();
+      const precioAnt = parseFloat(r[6]);
+      const nuevo = { id: uid(), nombre, categoria: categoria || 'SIN CATEGORÍA', sucursal: suc, unidad: unidadImp, precios: {}, proveedor, obs };
+      if(!isNaN(precio)) {
+        nuevo.precios[mes] = precio;
+        // Col G = precio anterior: store on object AND in prev month if available
+        if(!isNaN(precioAnt)) {
+          nuevo.precioAnterior = precioAnt;
+          const mesPrev = state.meses[state.meses.indexOf(mes) - 1];
+          if(mesPrev) nuevo.precios[mesPrev] = precioAnt;
+          // Also log in historial
+          addHistEntry(nuevo, mes, precioAnt, precio);
+        }
+      }
       state.insumos.push(nuevo);
       added++;
     }
@@ -2096,9 +2136,9 @@ function cancelImport() {
 function downloadTemplate() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['Insumo','Categoría','Precio','Proveedor','Observaciones'],
-    ['Carne (Kgs)','CARNES',11950,'Proveedor SA',''],
-    ['Pan Golden (und)','PANES',435.6,'','Paq x 12'],
+    ['Insumo','Categoría','Precio nuevo','Proveedor','Observaciones','Unidad','Precio anterior (opcional)'],
+    ['Carne (Kgs)','CARNES',11950,'Proveedor SA','','kg',10950],
+    ['Pan Golden (und)','PANES',435.6,'','Paq x 12','und',396],
   ]);
   XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
   XLSX.writeFile(wb, 'Plantilla_Importacion_Leno.xlsx');

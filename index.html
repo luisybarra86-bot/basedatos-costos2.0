@@ -762,6 +762,7 @@
           <thead><tr>
             <th class="sortable" onclick="sortTable('nombre')">Insumo ↕</th>
             <th class="sortable" onclick="sortTable('categoria')">Categoría ↕</th>
+            <th>Unidad</th>
             <th>Sucursal</th>
             <th class="sortable" onclick="sortTable('precio')">Precio actual ↕</th>
             <th>Precio ant.</th>
@@ -933,6 +934,26 @@
           <input class="form-input" id="newCatInput" placeholder="Nueva categoría..." style="flex:1; text-transform:uppercase;">
           <button type="button" class="btn btn-primary btn-sm" onclick="confirmNewCat()">+ Agregar</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="cancelNewCat()">✕</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unidad de medida</label>
+        <select class="form-input" id="mUnidad" onchange="handleUnidadChange(this)">
+          <option value="">— Sin especificar —</option>
+          <option value="kg">kg — Kilogramo</option>
+          <option value="lts">lts — Litros</option>
+          <option value="und">und — Unidad</option>
+          <option value="caja">caja — Caja</option>
+          <option value="paq">paq — Paquete</option>
+          <option value="atado">atado</option>
+          <option value="rollo">rollo</option>
+          <option value="bandeja">bandeja</option>
+          <option value="otro">otro...</option>
+        </select>
+        <div id="newUnidadRow" style="display:none; flex-direction:row; gap:6px; margin-top:6px;">
+          <input class="form-input" id="newUnidadInput" placeholder="Escribí la unidad...">
+          <button type="button" class="btn btn-primary btn-sm" onclick="confirmNewUnidad()">✓</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="cancelNewUnidad()">✕</button>
         </div>
       </div>
       <div class="form-group">
@@ -1577,6 +1598,7 @@ function renderTable() {
       return `<tr>
         <td>${i.nombre}${i.obs ? `<br><span style="font-size:11px;color:var(--muted)">${i.obs}</span>` : ''}</td>
         <td><span class="cat-badge">${i.categoria}</span></td>
+        <td style="color:var(--muted);font-size:12px">${i.unidad || '—'}</td>
         <td><span class="badge badge-${sucCls}">${i.sucursal}</span></td>
         <td class="price-cell" style="font-size:14px">${fmt(cur)}</td>
         <td class="price-cell" style="color:var(--muted)">${fmt(prv)}</td>
@@ -1624,6 +1646,8 @@ function openAddModal() {
   document.getElementById('modalTitle').textContent = 'AGREGAR INSUMO';
   document.getElementById('mNombre').value = '';
   document.getElementById('mPrecio').value = '';
+  document.getElementById('mUnidad').value = '';
+  document.getElementById('newUnidadRow').style.display = 'none';
   document.getElementById('mProveedor').value = '';
   document.getElementById('mObs').value = '';
   refreshCatSelects();
@@ -1647,6 +1671,8 @@ function openEditModal(id) {
   document.getElementById('mSucursal').value = ins.sucursal;
   document.getElementById('mPrecio').value = getPrice(ins, state.activeMes) || '';
   document.getElementById('mMes').value = state.activeMes;
+  document.getElementById('mUnidad').value = ins.unidad || '';
+  document.getElementById('newUnidadRow').style.display = 'none';
   document.getElementById('mProveedor').value = ins.proveedor || '';
   document.getElementById('mObs').value = ins.obs || '';
   openModal('insumoModal');
@@ -1659,6 +1685,7 @@ function saveInsumo() {
   if(categoria === '__nueva__') { toast('Confirmá la nueva categoría antes de guardar', 'error'); return; }
   const precio = parseFloat(document.getElementById('mPrecio').value);
   const mes = document.getElementById('mMes').value;
+  const unidad = document.getElementById('mUnidad').value === 'otro' ? (document.getElementById('newUnidadInput').value.trim() || '') : document.getElementById('mUnidad').value;
   const proveedor = document.getElementById('mProveedor').value.trim();
   const obs = document.getElementById('mObs').value.trim();
 
@@ -1668,7 +1695,7 @@ function saveInsumo() {
     const ins = state.insumos.find(i => i.id === state.editingId);
     const oldPrice = getPrice(ins, mes);
     ins.nombre = nombre; ins.categoria = categoria; ins.sucursal = sucursal;
-    ins.proveedor = proveedor; ins.obs = obs;
+    ins.unidad = unidad; ins.proveedor = proveedor; ins.obs = obs;
     if(!isNaN(precio)) {
       if(ins.precios[mes] !== precio) {
         addHistEntry(ins, mes, ins.precios[mes], precio);
@@ -1677,7 +1704,7 @@ function saveInsumo() {
     }
     toast('Insumo actualizado', 'success');
   } else {
-    const nuevo = { id: uid(), nombre, categoria, sucursal, precios: {}, proveedor, obs };
+    const nuevo = { id: uid(), nombre, categoria, sucursal, unidad, precios: {}, proveedor, obs };
     if(!isNaN(precio)) nuevo.precios[mes] = precio;
     state.insumos.push(nuevo);
     toast('Insumo agregado', 'success');
@@ -2103,6 +2130,38 @@ function toast(msg, type = 'info') {
 // ═══════════════════════════════════════════
 //   INIT
 // ═══════════════════════════════════════════
+function handleUnidadChange(sel) {
+  const row = document.getElementById('newUnidadRow');
+  if(sel.value === 'otro') {
+    row.style.display = 'flex';
+    document.getElementById('newUnidadInput').focus();
+  } else {
+    row.style.display = 'none';
+  }
+}
+
+function confirmNewUnidad() {
+  const val = document.getElementById('newUnidadInput').value.trim();
+  if(!val) { toast('Escribí la unidad de medida', 'error'); return; }
+  // Add as option to select
+  const sel = document.getElementById('mUnidad');
+  const existing = [...sel.options].find(o => o.value === val);
+  if(!existing) {
+    const o = document.createElement('option');
+    o.value = val; o.textContent = val;
+    // Insert before "otro"
+    const otroOpt = [...sel.options].find(o => o.value === 'otro');
+    sel.insertBefore(o, otroOpt);
+  }
+  sel.value = val;
+  document.getElementById('newUnidadRow').style.display = 'none';
+}
+
+function cancelNewUnidad() {
+  document.getElementById('newUnidadRow').style.display = 'none';
+  document.getElementById('mUnidad').value = '';
+}
+
 function init() {
   renderSucPills();
   renderMonthTabs('dashMonthTabs');

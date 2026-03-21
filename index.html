@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LENO · Base de Datos Costos</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -1191,7 +1193,7 @@
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const CATS_DEFAULT = ['CARNES','PANES','QUESOS / LACTEOS','PANCETA','PAPAS','PULPAS - CONGELADOS','JUGOS','PACKAGING','DESCARTABLES','PARAFINADOS','VERDURAS','ADEREZOS','MERCADERIA','PORCIONADOS'];
 
-let state = loadState();
+let state = defaultState();
 
 function defaultState() {
   return {
@@ -1281,20 +1283,171 @@ function getDefaultProveedores() {
   ];
 }
 
-function loadState() {
+// ═══════════════════════════════════════════
+//   FIREBASE
+// ═══════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBLvUviobpilTyHDXJntXblApu5ozLnns8",
+  authDomain: "basedatosnew86.firebaseapp.com",
+  projectId: "basedatosnew86",
+  storageBucket: "basedatosnew86.firebasestorage.app",
+  messagingSenderId: "659304038099",
+  appId: "1:659304038099:web:57574e2d5feec2cab09e26"
+};
+
+let db            = null;
+let _fbOk         = false;
+let _syncTimer    = null;
+let _syncedHistIds = new Set();
+let _localWrite   = false;   // flag para ignorar snapshots propios
+
+function initFirebase() {
   try {
-    const raw = localStorage.getItem('leno_costos_v2');
-    if(raw) {
-      const s = JSON.parse(raw);
-      const def = defaultState();
-      return {...def, ...s};
-    }
-  } catch(e) {}
-  return defaultState();
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    _fbOk = true;
+  } catch(e) {
+    console.warn('[LENO] Firebase no disponible, usando localStorage:', e);
+  }
 }
 
+// ─── LOAD ───────────────────────────────────
+async function loadState() {
+  if (!_fbOk) { _loadFromLS(); return; }
+  try {
+    const [cfgDoc, insSnap, histSnap, provSnap] = await Promise.all([
+      db.collection('leno_config').doc('app').get(),
+      db.collection('leno_insumos').get(),
+      db.collection('leno_historial').get(),
+      db.collection('leno_proveedores').get(),
+    ]);
+
+    if (cfgDoc.exists) {
+      const c = cfgDoc.data();
+      const def = defaultState();
+      state.sucursales = c.sucursales ?? def.sucursales;
+      state.meses      = c.meses      ?? def.meses;
+      state.activeMes  = c.activeMes  ?? def.activeMes;
+      state.activeSuc  = c.activeSuc  ?? def.activeSuc;
+      state.categorias = c.categorias ?? def.categorias;
+    }
+
+    state.insumos     = insSnap.docs.map(d => d.data());
+    state.historial   = histSnap.docs.map(d => d.data()).sort((a,b) => (a.ts||0)-(b.ts||0));
+    state.proveedores = provSnap.docs.map(d => d.data());
+    histSnap.docs.forEach(d => _syncedHistIds.add(d.id));
+
+    // Migrar desde localStorage si Firestore está vacío
+    if (!state.insumos.length && !cfgDoc.exists) {
+      _loadFromLS();
+      await _pushStateToFirestore();
+    }
+  } catch(e) {
+    console.warn('[LENO] Error cargando Firestore, usando localStorage:', e);
+    _fbOk = false;
+    _loadFromLS();
+  }
+}
+
+function _loadFromLS() {
+  try {
+    const raw = localStorage.getItem('leno_costos_v2');
+    if (raw) {
+      const s = JSON.parse(raw);
+      Object.assign(state, { ...defaultState(), ...s });
+    }
+  } catch(e) {}
+}
+
+// ─── SAVE ───────────────────────────────────
 function saveState() {
+  // localStorage siempre como fallback
   try { localStorage.setItem('leno_costos_v2', JSON.stringify(state)); } catch(e) {}
+  if (!_fbOk) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(_pushStateToFirestore, 600);
+}
+
+async function _pushStateToFirestore() {
+  if (!_fbOk) return;
+  _localWrite = true;
+  try {
+    // Config
+    await db.collection('leno_config').doc('app').set({
+      sucursales: state.sucursales,
+      meses:      state.meses,
+      activeMes:  state.activeMes,
+      activeSuc:  state.activeSuc,
+      categorias: state.categorias,
+    });
+
+    // Insumos (batch, máx 500 ops — suficiente para este app)
+    if (state.insumos.length) {
+      const b = db.batch();
+      state.insumos.forEach(i => b.set(db.collection('leno_insumos').doc(i.id), i));
+      await b.commit();
+    }
+
+    // Proveedores
+    if (state.proveedores.length) {
+      const b = db.batch();
+      state.proveedores.forEach(p => b.set(db.collection('leno_proveedores').doc(p.id), p));
+      await b.commit();
+    }
+
+    // Historial — solo entradas nuevas (append-only)
+    const nuevas = state.historial.filter(h => !_syncedHistIds.has(h.id));
+    if (nuevas.length) {
+      const b = db.batch();
+      nuevas.forEach(h => {
+        b.set(db.collection('leno_historial').doc(h.id), h);
+        _syncedHistIds.add(h.id);
+      });
+      await b.commit();
+    }
+  } catch(e) {
+    console.warn('[LENO] Error sincronizando con Firestore:', e);
+  } finally {
+    setTimeout(() => { _localWrite = false; }, 300);
+  }
+}
+
+// ─── LISTENERS (tiempo real) ─────────────────
+function setupFirestoreListeners() {
+  if (!_fbOk) return;
+
+  db.collection('leno_insumos').onSnapshot(snap => {
+    if (_localWrite) return;
+    if (document.querySelector('#insumosBody input')) return; // edición inline activa
+    state.insumos = snap.docs.map(d => d.data());
+    if (document.getElementById('view-insumos')?.classList.contains('active'))   renderTable();
+    if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
+  });
+
+  db.collection('leno_historial').onSnapshot(snap => {
+    if (_localWrite) return;
+    state.historial = snap.docs.map(d => d.data()).sort((a,b) => (a.ts||0)-(b.ts||0));
+    snap.docs.forEach(d => _syncedHistIds.add(d.id));
+    if (document.getElementById('view-historial')?.classList.contains('active')) renderHistorial();
+  });
+
+  db.collection('leno_proveedores').onSnapshot(snap => {
+    if (_localWrite) return;
+    state.proveedores = snap.docs.map(d => d.data());
+    if (document.getElementById('view-proveedores')?.classList.contains('active')) renderProveedores();
+  });
+
+  db.collection('leno_config').doc('app').onSnapshot(doc => {
+    if (_localWrite || !doc.exists) return;
+    const c = doc.data();
+    state.sucursales = c.sucursales ?? state.sucursales;
+    state.meses      = c.meses      ?? state.meses;
+    state.categorias = c.categorias ?? state.categorias;
+    // activeMes / activeSuc no se sobreescriben para no interrumpir al usuario
+    renderSucPills();
+    renderMonthTabs('dashMonthTabs');
+    renderMonthTabs('insMonthTabs');
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -1969,6 +2122,7 @@ function saveInsumo() {
 function deleteInsumo(id) {
   if(!confirm('¿Eliminar este insumo?')) return;
   state.insumos = state.insumos.filter(i => i.id !== id);
+  if (_fbOk) db.collection('leno_insumos').doc(id).delete().catch(e => console.warn('[LENO] delete insumo:', e));
   saveState();
   renderTable();
   renderDashboard();
@@ -2155,6 +2309,7 @@ function startPrevPriceEdit(td, id) {
 function addHistEntry(ins, mes, anterior, nuevo, obs='') {
   state.historial.push({
     id: uid(),
+    ts: Date.now(),
     insumoId: ins.id,
     nombre: ins.nombre,
     categoria: ins.categoria,
@@ -2281,6 +2436,7 @@ function saveProv() {
 function deleteProv(id) {
   if(!confirm('¿Eliminar este proveedor?')) return;
   state.proveedores = state.proveedores.filter(p => p.id !== id);
+  if (_fbOk) db.collection('leno_proveedores').doc(id).delete().catch(e => console.warn('[LENO] delete prov:', e));
   saveState();
   renderProveedores();
   toast('Proveedor eliminado', 'success');
@@ -2693,7 +2849,8 @@ function loadSavedTheme() {
   renderSwatches();
 }
 
-function init() {
+async function init() {
+  // Render inmediato con defaultState para que la UI no quede en blanco
   loadSavedTheme();
   renderSucPills();
   renderMonthTabs('dashMonthTabs');
@@ -2702,11 +2859,28 @@ function init() {
   refreshCatSelects();
   refreshSucSelects();
   renderDashboard();
+
   // Setup drag
   const zone = document.getElementById('importZone');
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
   zone.addEventListener('drop', e => { zone.classList.remove('dragover'); handleDrop(e); });
+
+  // Firebase: cargar datos reales y activar listeners
+  initFirebase();
+  if (_fbOk) toast('Sincronizando con Firestore…', 'info');
+  await loadState();
+  setupFirestoreListeners();
+
+  // Re-render con datos reales
+  renderSucPills();
+  renderMonthTabs('dashMonthTabs');
+  renderMonthTabs('insMonthTabs');
+  refreshMesSelects();
+  refreshCatSelects();
+  refreshSucSelects();
+  renderDashboard();
+  if (_fbOk) toast('Datos cargados ✓', 'success');
 }
 
 init();

@@ -320,6 +320,12 @@
   }
 
   .price-cell { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .price-editable { cursor: text; }
+  .price-editable:hover { color: var(--accent); }
+  @keyframes flashGreen { 0%,100%{ background:transparent } 40%{ background:rgba(34,197,94,0.22) } }
+  @keyframes flashRed   { 0%,100%{ background:transparent } 40%{ background:rgba(239,68,68,0.22) } }
+  .flash-green { animation: flashGreen 0.6s ease; }
+  .flash-red   { animation: flashRed   0.6s ease; }
 
   .trend {
     display: inline-flex;
@@ -1842,13 +1848,13 @@ function renderTable() {
       const trend = getTrend(prv, cur);
       const diff = pct(prv, cur);
       const sucCls = i.sucursal === 'LENO' ? 'leno' : i.sucursal === 'VIANDAS' ? 'viandas' : '';
-      return `<tr>
+      return `<tr data-id="${i.id}">
         <td>${i.nombre}${i.obs ? `<br><span style="font-size:11px;color:var(--muted)">${i.obs}</span>` : ''}</td>
         <td><span class="cat-badge">${i.categoria}</span></td>
         <td style="color:var(--muted);font-size:12px">${i.unidad || '—'}</td>
         <td><span class="badge badge-${sucCls}">${i.sucursal}</span></td>
-        <td class="price-cell" style="font-size:14px">${fmt(cur)}</td>
-        <td class="price-cell" style="color:var(--muted)">${fmt(prv)}</td>
+        <td class="price-cell price-editable" style="font-size:14px" title="Clic para editar precio actual" onclick="startPriceEdit(this,'${i.id}')">${fmt(cur)}</td>
+        <td class="price-cell price-editable" style="color:var(--muted)" title="Clic para editar precio anterior" onclick="startPrevPriceEdit(this,'${i.id}')">${fmt(prv)}</td>
         <td>${sparklineSVG(i)}</td>
         <td>${cur ? `<span class="trend ${trend}">${trend==='up'?'▲':trend==='down'?'▼':'—'} ${diff !== null ? Math.abs(diff)+'%' : '—'}</span>` : '—'}</td>
         <td style="color:var(--muted);font-size:12px">${i.proveedor || '—'}</td>
@@ -2050,6 +2056,100 @@ function setPrice(ins, mes, nuevo, obs='') {
   if(anterior !== null && anterior !== undefined) ins.precioAnterior = anterior;
   if(anterior !== nuevo) addHistEntry(ins, mes, anterior, nuevo, obs);
   ins.precios[mes] = nuevo;
+}
+
+const INPUT_STYLE = 'width:90px;background:var(--surface2);border:1.5px solid var(--accent);border-radius:5px;padding:3px 7px;color:var(--text);font-family:"DM Sans",sans-serif;font-size:13px;font-weight:500;outline:none;';
+
+function flashCell(id, cellIndex, cls) {
+  const row = document.querySelector(`tr[data-id="${id}"]`);
+  if (!row) return;
+  const cell = row.querySelectorAll('td.price-cell')[cellIndex];
+  if (!cell) return;
+  cell.classList.add(cls);
+  setTimeout(() => cell.classList.remove(cls), 650);
+}
+
+function makeInlineInput(td, currentValue, onCommit, onCancel) {
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.value = currentValue || '';
+  input.style.cssText = INPUT_STYLE;
+  td.textContent = '';
+  td.appendChild(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+
+  function commit() {
+    if (done) return;
+    done = true;
+    onCommit(parseFloat(input.value));
+  }
+  function cancel() {
+    if (done) return;
+    done = true;
+    onCancel();
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', cancel);
+}
+
+function startPriceEdit(td, id) {
+  const ins = state.insumos.find(i => i.id === id);
+  if (!ins) return;
+  const mes = state.activeMes;
+  const cur = getPrice(ins, mes);
+
+  makeInlineInput(td, cur,
+    (nuevo) => {
+      if (!isNaN(nuevo) && nuevo !== cur) {
+        setPrice(ins, mes, nuevo);
+        saveState();
+        const trend = getTrend(cur, nuevo);
+        renderTable();
+        renderDashboard();
+        flashCell(id, 0, trend === 'up' ? 'flash-red' : 'flash-green');
+        toast(trend === 'up' ? '▲ Precio aumentado' : trend === 'down' ? '▼ Precio bajó' : 'Sin cambio',
+              trend === 'up' ? 'error' : trend === 'down' ? 'success' : 'info');
+      } else {
+        td.textContent = fmt(cur);
+      }
+    },
+    () => { td.textContent = fmt(cur); }
+  );
+}
+
+function startPrevPriceEdit(td, id) {
+  const ins = state.insumos.find(i => i.id === id);
+  if (!ins) return;
+  const mes = state.activeMes;
+  const prev = prevMes(mes);
+  const cur = (prev ? getPrice(ins, prev) : null) || getLastKnownPrice(ins, mes);
+
+  makeInlineInput(td, cur,
+    (nuevo) => {
+      if (!isNaN(nuevo) && nuevo !== cur) {
+        if (prev) {
+          ins.precios[prev] = nuevo;
+        } else {
+          ins.precioAnterior = nuevo;
+        }
+        saveState();
+        renderTable();
+        renderDashboard();
+        flashCell(id, 1, 'flash-green');
+        toast('Precio anterior actualizado', 'info');
+      } else {
+        td.textContent = fmt(cur);
+      }
+    },
+    () => { td.textContent = fmt(cur); }
+  );
 }
 
 function addHistEntry(ins, mes, anterior, nuevo, obs='') {

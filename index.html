@@ -7,9 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   :root {
     --bg: #0d0f14;
@@ -51,7 +48,6 @@
     position: fixed;
     top: 0; left: 0; bottom: 0;
     z-index: 100;
-    overflow-y: auto;
   }
 
   .sidebar-logo {
@@ -193,6 +189,7 @@
 
   /* ── DASHBOARD ── */
   .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-grid.has-mover { grid-template-rows: auto auto; }
 
   .kpi {
     background: var(--surface);
@@ -613,6 +610,95 @@
     margin-top: 10px;
   }
 
+
+
+  /* ── SPARKLINE ── */
+  .sparkline { display:inline-block; vertical-align:middle; }
+
+  /* ── TOP MOVER KPI ── */
+  .kpi-mover {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .kpi-mover::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--red);
+  }
+  .kpi-mover-icon { font-size: 28px; flex-shrink:0; }
+  .kpi-mover-body { flex:1; min-width:0; }
+  .kpi-mover-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
+  .kpi-mover-name { font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px; }
+  .kpi-mover-detail { font-size:12px; color:var(--muted); }
+  .kpi-mover-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: var(--red);
+    flex-shrink: 0;
+    letter-spacing: 1px;
+  }
+  .kpi-mover-prices { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
+  .kpi-mover-prev { font-size:12px; color:var(--muted); text-decoration:line-through; }
+  .kpi-mover-cur { font-size:16px; font-weight:600; }
+
+  /* ── THEME PICKER ── */
+  .theme-picker {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .theme-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .theme-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+  .swatch {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .swatch:hover { transform: scale(1.2); }
+  .swatch.active { border-color: #fff; transform: scale(1.15); }
+
+  /* dark/light mode toggle */
+  .mode-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-track {
+    width: 32px; height: 17px;
+    background: var(--border);
+    border-radius: 20px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-track.on { background: var(--accent); }
+  .toggle-thumb {
+    width: 13px; height: 13px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: left 0.2s;
+  }
+  .toggle-track.on .toggle-thumb { left: 17px; }
+
   /* ── RESPONSIVE ── */
   @media (max-width: 900px) {
     .kpi-grid { grid-template-columns: 1fr 1fr; }
@@ -646,56 +732,9 @@
   .hist-filter { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
   
   .no-results { padding: 40px; text-align: center; color: var(--muted); }
-
-  /* ── LOADING OVERLAY ── */
-  #loadingOverlay {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .loading-spin {
-    width: 32px; height: 32px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── FS / EMAIL BADGE ── */
-  .fs-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600;
-  }
-  .fs-badge.ok { background: rgba(34,197,94,0.1); color: var(--green); }
-  .fs-badge.err { background: rgba(239,68,68,0.1); color: var(--red); }
-  .fs-badge.loading { background: rgba(245,166,35,0.1); color: var(--accent); }
-
-  /* ── CONFIG VIEW ── */
-  .config-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    margin-bottom: 20px;
-  }
-  .config-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
-  .config-section .config-desc { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
 </style>
 </head>
 <body>
-
-<!-- LOADING OVERLAY -->
-<div id="loadingOverlay">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:3px;color:var(--accent)">LENO</div>
-  <div class="loading-spin"></div>
-  <div style="color:var(--muted);font-size:13px" id="loadingMsg">Conectando a la base de datos...</div>
-</div>
 
 <div class="app">
 
@@ -704,7 +743,6 @@
   <div class="sidebar-logo">
     <div class="logo-title">LENO</div>
     <div class="logo-sub">Base de Datos Costos</div>
-    <div id="fsBadge" class="fs-badge loading" style="margin-top:10px;display:block;width:fit-content">⏳ Conectando...</div>
   </div>
 
   <div class="sidebar-section">
@@ -733,9 +771,6 @@
     <button class="nav-item" onclick="goTo('importar')">
       <span class="nav-icon">⬆️</span> Importar Excel
     </button>
-    <button class="nav-item" onclick="goTo('config')">
-      <span class="nav-icon">⚙️</span> Configuración
-    </button>
   </div>
 
   <div class="sucursal-switcher">
@@ -744,6 +779,15 @@
     <div class="add-suc-form">
       <input class="form-input" id="newSucInput" placeholder="Nueva sucursal..." style="font-size:12px; padding:5px 8px;">
       <button class="btn btn-ghost btn-sm" onclick="addSucursal()">+</button>
+    </div>
+  </div>
+
+  <div class="theme-picker">
+    <div class="theme-label">🎨 Color de acento</div>
+    <div class="theme-swatches" id="swatches"></div>
+    <div class="mode-toggle" onclick="toggleMode()" id="modeToggle">
+      <div class="toggle-track" id="modeTrack"><div class="toggle-thumb"></div></div>
+      <span id="modeLabel">Modo oscuro</span>
     </div>
   </div>
 </aside>
@@ -775,8 +819,21 @@
           <div class="chart-wrap"><canvas id="catChart"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="card-title">Variaciones de precio (último mes)</div>
-          <div class="chart-wrap"><canvas id="varChart"></canvas></div>
+          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Resumen variaciones</span>
+            <span id="varSummaryBadges" style="display:flex;gap:6px"></span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto" id="varSummaryList"></div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="margin-bottom:24px">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Variaciones de precio — todos los insumos con cambio</span>
+          <span id="varChartCount" style="font-size:11px;color:var(--muted);font-weight:400"></span>
+        </div>
+        <div id="varChartWrap" style="position:relative;overflow-y:auto;">
+          <canvas id="varChart"></canvas>
         </div>
       </div>
 
@@ -821,6 +878,7 @@
             <th>Sucursal</th>
             <th class="sortable" onclick="sortTable('precio')">Precio actual ↕</th>
             <th>Precio ant.</th>
+            <th>Tendencia</th>
             <th>Variación</th>
             <th>Proveedor</th>
             <th></th>
@@ -964,53 +1022,6 @@
         <br>
         <button class="btn btn-ghost btn-sm" onclick="downloadTemplate()">⬇️ Descargar plantilla</button>
       </div>
-    </div>
-
-    <!-- ════ CONFIGURACIÓN ════ -->
-    <div class="view" id="view-config">
-
-      <div class="config-section">
-        <h3>🔥 Estado de Firebase / Firestore</h3>
-        <p class="config-desc">Firestore sincroniza los datos en la nube. localStorage actúa como backup si no hay conexión.</p>
-        <div id="fsStatusDetail"><span class="fs-badge loading">⏳ Verificando...</span></div>
-      </div>
-
-      <div class="config-section">
-        <h3>📧 Reporte Mensual por Email (EmailJS)</h3>
-        <p class="config-desc">
-          Enviá el reporte del mes activo por email con un clic. El botón hace dos cosas a la vez:
-          descarga el Excel del mes y envía un email con la tabla HTML de todos los insumos.<br><br>
-          Necesitás una cuenta gratuita en <strong>emailjs.com</strong>. En tu template configurá las variables:
-          <code>{{mes}}</code>, <code>{{tabla_html}}</code>, <code>{{total_insumos}}</code>,
-          <code>{{con_aumento}}</code>, <code>{{con_baja}}</code>, <code>{{to_email}}</code>.
-        </p>
-        <div style="margin-bottom:16px">
-          Estado: <span id="emailjsStatus" class="fs-badge err">Sin configurar</span>
-        </div>
-        <div class="form-grid">
-          <div class="form-group form-full">
-            <label class="form-label">Public Key</label>
-            <input class="form-input" id="ejPublicKey" placeholder="user_xxxxxxxxxxxx">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Service ID</label>
-            <input class="form-input" id="ejServiceId" placeholder="service_xxxxxxx">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Template ID</label>
-            <input class="form-input" id="ejTemplateId" placeholder="template_xxxxxxx">
-          </div>
-          <div class="form-group form-full">
-            <label class="form-label">Email destino</label>
-            <input class="form-input" id="ejToEmail" placeholder="tu@email.com" type="email">
-          </div>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-primary" style="padding:12px 24px;font-size:14px" onclick="enviarReporteMensual()">📧 Enviar reporte del mes</button>
-          <button class="btn btn-ghost" onclick="saveEmailConfig()">Guardar configuración</button>
-        </div>
-      </div>
-
     </div>
 
   </div><!-- /content -->
@@ -1169,89 +1180,6 @@
 
 <script>
 // ═══════════════════════════════════════════
-//   FIREBASE / FIRESTORE
-// ═══════════════════════════════════════════
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBLvUviobpilTyHDXJntXblApu5ozLnns8",
-  authDomain: "basedatosnew86.firebaseapp.com",
-  projectId: "basedatosnew86",
-  storageBucket: "basedatosnew86.firebasestorage.app",
-  messagingSenderId: "659304038099",
-  appId: "1:659304038099:web:57574e2d5feec2cab09e26"
-};
-
-let db = null;
-let firestoreOk = false;
-
-async function initFirestore() {
-  try {
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.firestore();
-    // Test de conexión — lee el doc principal
-    await db.collection('leno_costos').doc('state').get();
-    firestoreOk = true;
-    setFsBadge('ok', '🔥 Firestore activo');
-  } catch(e) {
-    console.warn('Firestore no disponible:', e);
-    firestoreOk = false;
-    setFsBadge('err', '❌ Sin conexión (modo local)');
-  }
-}
-
-function setFsBadge(type, text) {
-  const b = document.getElementById('fsBadge');
-  if(b) { b.className = 'fs-badge ' + type; b.textContent = text; b.style.display = 'block'; }
-}
-
-async function loadFromFirestore() {
-  if(!firestoreOk || !db) return false;
-  try {
-    const snap = await db.collection('leno_costos').doc('state').get();
-    if(!snap.exists) return false;
-    const data = snap.data();
-    if(data.insumos?.length)     state.insumos     = data.insumos;
-    if(data.historial?.length)   state.historial   = data.historial;
-    if(data.proveedores?.length) state.proveedores = data.proveedores;
-    if(data.sucursales?.length)  state.sucursales  = data.sucursales;
-    if(data.activeSuc)           state.activeSuc   = data.activeSuc;
-    if(data.meses?.length)       state.meses       = data.meses;
-    if(data.activeMes)           state.activeMes   = data.activeMes;
-    if(data.categorias?.length)  state.categorias  = data.categorias;
-    return true;
-  } catch(e) {
-    console.warn('Error cargando Firestore:', e);
-    return false;
-  }
-}
-
-// Guarda el estado completo en leno_costos/state (fire & forget)
-async function fsSaveState() {
-  if(!firestoreOk || !db) return;
-  try {
-    await db.collection('leno_costos').doc('state').set({
-      insumos:     state.insumos,
-      historial:   state.historial,
-      proveedores: state.proveedores,
-      sucursales:  state.sucursales,
-      activeSuc:   state.activeSuc,
-      meses:       state.meses,
-      activeMes:   state.activeMes,
-      categorias:  state.categorias,
-      _updated:    new Date().toISOString(),
-    });
-  } catch(e) { console.warn('Firestore save error:', e); }
-}
-
-// Stubs: fsSaveState() se dispara desde saveState() en cada mutación
-async function fsSetInsumo(ins)         { /* cubierto por saveState() */ }
-async function fsDeleteInsumo(id)       { /* cubierto por saveState() */ }
-async function fsSetHistEntry(h)        { /* cubierto por saveState() */ }
-async function fsSetProv(p)             { /* cubierto por saveState() */ }
-async function fsDeleteProv(id)         { /* cubierto por saveState() */ }
-async function fsSetConfig()            { /* cubierto por saveState() */ }
-async function fsBatchSaveInsumos(ins)  { /* cubierto por saveState() */ }
-
-// ═══════════════════════════════════════════
 //   ESTADO GLOBAL
 // ═══════════════════════════════════════════
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -1361,7 +1289,6 @@ function loadState() {
 
 function saveState() {
   try { localStorage.setItem('leno_costos_v2', JSON.stringify(state)); } catch(e) {}
-  fsSaveState(); // sync a Firestore (async, fire & forget)
 }
 
 // ═══════════════════════════════════════════
@@ -1412,7 +1339,6 @@ const pageTitles = {
   proveedores: ['PROVEEDORES','Directorio de proveedores'],
   reportes: ['REPORTES','Generar y exportar reportes'],
   importar: ['IMPORTAR EXCEL','Carga masiva de insumos'],
-  config: ['CONFIGURACIÓN','Firebase y notificaciones por email'],
 };
 
 function goTo(page) {
@@ -1436,7 +1362,6 @@ function goTo(page) {
   if(page === 'proveedores') renderProveedores();
   if(page === 'reportes') setupReportes();
   if(page === 'dashboard') renderDashboard();
-  if(page === 'config') renderConfig();
 }
 
 // ═══════════════════════════════════════════
@@ -1463,7 +1388,7 @@ function addSucursal() {
   state.sucursales.push(val);
   document.getElementById('newSucInput').value = '';
   saveState();
-  fsSetConfig();
+  loadSavedTheme();
   renderSucPills();
   toast('Sucursal "'+val+'" agregada', 'success');
 }
@@ -1516,7 +1441,6 @@ function addMes() {
   state.meses.push(next);
   state.activeMes = next;
   saveState();
-  fsSetConfig();
   renderMonthTabs('dashMonthTabs');
   renderMonthTabs('insMonthTabs');
   refreshMesSelects();
@@ -1596,7 +1520,6 @@ function confirmNewCat() {
   else {
     state.categorias.push(val);
     saveState();
-    fsSetConfig();
     toast('Categoría "'+val+'" agregada ✓', 'success');
   }
   refreshCatSelects();
@@ -1641,6 +1564,61 @@ function renderDashboard() {
     return p && c && c === p;
   });
 
+  // Find top mover (biggest % increase)
+  const topMover = subidos.length ? subidos.reduce((best, i) => {
+    const pb = prev ? getPrice(best, prev) : getLastKnownPrice(best, mes);
+    const cb = getPrice(best, mes);
+    const pi = prev ? getPrice(i, prev) : getLastKnownPrice(i, mes);
+    const ci = getPrice(i, mes);
+    return (+pct(pi,ci) > +pct(pb,cb)) ? i : best;
+  }) : null;
+  const topBajada = bajados.length ? bajados.reduce((best, i) => {
+    const pb = prev ? getPrice(best, prev) : getLastKnownPrice(best, mes);
+    const cb = getPrice(best, mes);
+    const pi = prev ? getPrice(i, prev) : getLastKnownPrice(i, mes);
+    const ci = getPrice(i, mes);
+    return (+pct(pi,ci) < +pct(pb,cb)) ? i : best;
+  }) : null;
+
+  const moverHTML = topMover ? (() => {
+    const p = prev ? getPrice(topMover, prev) : getLastKnownPrice(topMover, mes);
+    const cv = getPrice(topMover, mes);
+    const d = pct(p, cv);
+    return `<div class="kpi-mover">
+      <div class="kpi-mover-icon">🔺</div>
+      <div class="kpi-mover-body">
+        <div class="kpi-mover-label">Mayor aumento del mes</div>
+        <div class="kpi-mover-name">${topMover.nombre}</div>
+        <div class="kpi-mover-detail">${topMover.categoria} · ${topMover.sucursal}</div>
+      </div>
+      <div class="kpi-mover-prices">
+        <span class="kpi-mover-prev">${fmt(p)}</span>
+        <span class="kpi-mover-cur">${fmt(cv)}</span>
+      </div>
+      <div class="kpi-mover-pct">+${d}%</div>
+    </div>`;
+  })() : '';
+
+  const bajadaHTML = topBajada ? (() => {
+    const p = prev ? getPrice(topBajada, prev) : getLastKnownPrice(topBajada, mes);
+    const cv = getPrice(topBajada, mes);
+    const d = pct(p, cv);
+    return `<div class="kpi-mover" style="--red:var(--green)">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--green)"></div>
+      <div class="kpi-mover-icon">🔻</div>
+      <div class="kpi-mover-body">
+        <div class="kpi-mover-label">Mayor baja del mes</div>
+        <div class="kpi-mover-name">${topBajada.nombre}</div>
+        <div class="kpi-mover-detail">${topBajada.categoria} · ${topBajada.sucursal}</div>
+      </div>
+      <div class="kpi-mover-prices">
+        <span class="kpi-mover-prev">${fmt(p)}</span>
+        <span class="kpi-mover-cur" style="color:var(--green)">${fmt(cv)}</span>
+      </div>
+      <div class="kpi-mover-pct" style="color:var(--green)">${d}%</div>
+    </div>`;
+  })() : '';
+
   const kpiGrid = document.getElementById('kpiGrid');
   kpiGrid.innerHTML = `
     <div class="kpi orange">
@@ -1663,6 +1641,8 @@ function renderDashboard() {
       <div class="kpi-value" style="color:var(--viandas)">${sinCambio.length}</div>
       <div class="kpi-sub">${prev ? 'vs. '+prev : '—'}</div>
     </div>
+    ${moverHTML}
+    ${bajadaHTML}
   `;
 
   // Cat chart
@@ -1682,39 +1662,108 @@ function renderDashboard() {
     options: { plugins: { legend: { position: 'right', labels: { color: '#6b7280', font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } }, maintainAspectRatio: false }
   });
 
-  // Var chart
+  // Var chart — ALL items with change, sorted by % variation
   const varItems = all.filter(i => {
-    const p = prev ? getPrice(i, prev) : null;
-    const c = getPrice(i, mes);
-    return p && c && c !== p;
+    const p = prev ? getPrice(i, prev) : getLastKnownPrice(i, mes);
+    const cv = getPrice(i, mes);
+    return p && cv && p !== cv;
   }).sort((a,b) => {
-    const pa = getPrice(a,prev), ca = getPrice(a,mes);
-    const pb = getPrice(b,prev), cb = getPrice(b,mes);
-    return Math.abs((cb-pb)/pb) - Math.abs((ca-pa)/pa);
-  }).slice(-8).reverse();
+    const pa = prev ? getPrice(a,prev) : getLastKnownPrice(a,mes);
+    const ca = getPrice(a,mes);
+    const pb = prev ? getPrice(b,prev) : getLastKnownPrice(b,mes);
+    const cb = getPrice(b,mes);
+    return +pct(pb,cb) - +pct(pa,ca);
+  });
 
-  const varLabels = varItems.map(i => i.nombre.slice(0,22)+'…');
+  const varLabels = varItems.map(i => i.nombre);
   const varData = varItems.map(i => {
-    const p = getPrice(i,prev), c = getPrice(i,mes);
-    return +pct(p,c);
+    const p = prev ? getPrice(i,prev) : getLastKnownPrice(i,mes);
+    const cv = getPrice(i,mes);
+    return +pct(p,cv);
   });
   const varColors = varData.map(v => v > 0 ? '#ef4444' : '#22c55e');
+
+  // Dynamic height: 32px per bar minimum
+  const barH = Math.max(32, Math.min(48, Math.floor(600 / (varItems.length || 1))));
+  const chartH = Math.max(200, varItems.length * barH + 40);
+  const wrap = document.getElementById('varChartWrap');
+  wrap.style.height = chartH + 'px';
+  document.getElementById('varChartCount').textContent = varItems.length + ' insumos con variación';
 
   if(varChartInst) varChartInst.destroy();
   const ctx2 = document.getElementById('varChart').getContext('2d');
   varChartInst = new Chart(ctx2, {
     type: 'bar',
-    data: { labels: varLabels, datasets: [{ data: varData, backgroundColor: varColors, borderRadius: 4 }] },
+    data: {
+      labels: varLabels,
+      datasets: [{
+        data: varData,
+        backgroundColor: varColors,
+        borderRadius: 4,
+        barThickness: barH - 10,
+      }]
+    },
     options: {
       indexAxis: 'y',
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const i = varItems[ctx.dataIndex];
+              const p = prev ? getPrice(i,prev) : getLastKnownPrice(i,mes);
+              const cv = getPrice(i,mes);
+              const sign = ctx.raw > 0 ? '+' : '';
+              return [
+                ` Variación: ${sign}${ctx.raw}%`,
+                ` Anterior: ${fmt(p)}`,
+                ` Actual: ${fmt(cv)}`
+              ];
+            }
+          }
+        }
+      },
       scales: {
-        x: { ticks: { color: '#6b7280', callback: v => v+'%' }, grid: { color: '#252a38' } },
-        y: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { display: false } }
+        x: {
+          ticks: { color: '#6b7280', callback: v => v+'%' },
+          grid: { color: '#252a38' }
+        },
+        y: {
+          ticks: { color: '#c9cbd1', font: { size: 11 }, padding: 6 },
+          grid: { display: false }
+        }
       },
       maintainAspectRatio: false
     }
   });
+
+  // Summary panel (right card): top increases and decreases
+  const subieronn = varItems.filter((_,idx) => varData[idx] > 0);
+  const bajaron = varItems.filter((_,idx) => varData[idx] < 0);
+  const badges = document.getElementById('varSummaryBadges');
+  if(badges) badges.innerHTML = `
+    <span class="trend up">▲ ${subieronn.length} subieron</span>
+    <span class="trend down">▼ ${bajaron.length} bajaron</span>`;
+  const sumList = document.getElementById('varSummaryList');
+  if(sumList) {
+    const topItems = [...varItems].sort((a,b) => {
+      const pa = prev?getPrice(a,prev):getLastKnownPrice(a,mes), ca=getPrice(a,mes);
+      const pb = prev?getPrice(b,prev):getLastKnownPrice(b,mes), cb=getPrice(b,mes);
+      return Math.abs(+pct(pb,cb)) - Math.abs(+pct(pa,ca));
+    }).reverse().slice(0,8);
+    sumList.innerHTML = topItems.map(i => {
+      const p = prev?getPrice(i,prev):getLastKnownPrice(i,mes), cv=getPrice(i,mes);
+      const d = +pct(p,cv);
+      const t = getTrend(p,cv);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:12px;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.nombre}</span>
+        <span style="display:flex;gap:8px;flex-shrink:0;margin-left:8px">
+          <span style="font-size:11px;color:var(--muted)">${fmt(p)} → ${fmt(cv)}</span>
+          <span class="trend ${t}" style="font-size:11px">${t==='up'?'▲':'▼'} ${Math.abs(d)}%</span>
+        </span>
+      </div>`;
+    }).join('');
+  }
 
   // Top changes table
   const topChanges = [...subidos, ...bajados].sort((a,b) => {
@@ -1785,7 +1834,7 @@ function renderTable() {
 
   const tbody = document.getElementById('insumosBody');
   if(!paged.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="no-results">Sin resultados</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="no-results">Sin resultados</td></tr>`;
   } else {
     tbody.innerHTML = paged.map(i => {
       const cur = getPrice(i, mes);
@@ -1800,6 +1849,7 @@ function renderTable() {
         <td><span class="badge badge-${sucCls}">${i.sucursal}</span></td>
         <td class="price-cell" style="font-size:14px">${fmt(cur)}</td>
         <td class="price-cell" style="color:var(--muted)">${fmt(prv)}</td>
+        <td>${sparklineSVG(i)}</td>
         <td>${cur ? `<span class="trend ${trend}">${trend==='up'?'▲':trend==='down'?'▼':'—'} ${diff !== null ? Math.abs(diff)+'%' : '—'}</span>` : '—'}</td>
         <td style="color:var(--muted);font-size:12px">${i.proveedor || '—'}</td>
         <td>
@@ -1895,13 +1945,11 @@ function saveInsumo() {
     ins.nombre = nombre; ins.categoria = categoria; ins.sucursal = sucursal;
     ins.unidad = unidad; ins.proveedor = proveedor; ins.obs = obs;
     if(!isNaN(precio)) setPrice(ins, mes, precio);
-    fsSetInsumo(ins);
     toast('Insumo actualizado', 'success');
   } else {
     const nuevo = { id: uid(), nombre, categoria, sucursal, unidad, precios: {}, proveedor, obs };
     if(!isNaN(precio)) nuevo.precios[mes] = precio;
     state.insumos.push(nuevo);
-    fsSetInsumo(nuevo);
     toast('Insumo agregado', 'success');
   }
 
@@ -1915,7 +1963,6 @@ function saveInsumo() {
 function deleteInsumo(id) {
   if(!confirm('¿Eliminar este insumo?')) return;
   state.insumos = state.insumos.filter(i => i.id !== id);
-  fsDeleteInsumo(id);
   saveState();
   renderTable();
   renderDashboard();
@@ -1964,7 +2011,6 @@ function confirmPrecio() {
   addHistEntry(ins, mes, anterior, nuevo, obs);
   ins.precios[mes] = nuevo;
   if(proveedor) ins.proveedor = proveedor;
-  fsSetInsumo(ins);
   saveState();
   closeModal('precioModal');
   renderTable();
@@ -2007,7 +2053,7 @@ function setPrice(ins, mes, nuevo, obs='') {
 }
 
 function addHistEntry(ins, mes, anterior, nuevo, obs='') {
-  const entry = {
+  state.historial.push({
     id: uid(),
     insumoId: ins.id,
     nombre: ins.nombre,
@@ -2018,9 +2064,7 @@ function addHistEntry(ins, mes, anterior, nuevo, obs='') {
     precioNuevo: nuevo,
     fecha: new Date().toLocaleDateString('es-AR'),
     obs
-  };
-  state.historial.push(entry);
-  fsSetHistEntry(entry);
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -2122,16 +2166,12 @@ function openEditProvModal(id) {
 function saveProv() {
   const nombre = document.getElementById('pNombre').value.trim();
   if(!nombre) { toast('Ingresá el nombre del proveedor', 'error'); return; }
-  let savedProv;
   if(state.editingId) {
     const p = state.proveedores.find(x => x.id === state.editingId);
     p.nombre = nombre; p.tel = document.getElementById('pTel').value; p.email = document.getElementById('pEmail').value; p.notas = document.getElementById('pNotas').value;
-    savedProv = p;
   } else {
-    savedProv = { id: uid(), nombre, tel: document.getElementById('pTel').value, email: document.getElementById('pEmail').value, notas: document.getElementById('pNotas').value };
-    state.proveedores.push(savedProv);
+    state.proveedores.push({ id: uid(), nombre, tel: document.getElementById('pTel').value, email: document.getElementById('pEmail').value, notas: document.getElementById('pNotas').value });
   }
-  fsSetProv(savedProv);
   saveState();
   closeModal('provModal');
   renderProveedores();
@@ -2141,7 +2181,6 @@ function saveProv() {
 function deleteProv(id) {
   if(!confirm('¿Eliminar este proveedor?')) return;
   state.proveedores = state.proveedores.filter(p => p.id !== id);
-  fsDeleteProv(id);
   saveState();
   renderProveedores();
   toast('Proveedor eliminado', 'success');
@@ -2341,9 +2380,6 @@ function confirmImport() {
     }
   });
   saveState();
-  // Sync con Firestore (batch para eficiencia)
-  fsBatchSaveInsumos(state.insumos);
-  fsSetConfig();
   cancelImport();
   renderTable();
   renderDashboard();
@@ -2392,134 +2428,6 @@ function toast(msg, type = 'info') {
 }
 
 // ═══════════════════════════════════════════
-//   EMAILJS
-// ═══════════════════════════════════════════
-function loadEmailConfig() {
-  try { return JSON.parse(localStorage.getItem('leno_emailjs_config') || 'null') || {}; }
-  catch(e) { return {}; }
-}
-
-function saveEmailConfig() {
-  const cfg = {
-    publicKey: document.getElementById('ejPublicKey').value.trim(),
-    serviceId: document.getElementById('ejServiceId').value.trim(),
-    templateId: document.getElementById('ejTemplateId').value.trim(),
-    toEmail: document.getElementById('ejToEmail').value.trim(),
-  };
-  if(!cfg.publicKey || !cfg.serviceId || !cfg.templateId) {
-    toast('Completá Public Key, Service ID y Template ID', 'error'); return;
-  }
-  localStorage.setItem('leno_emailjs_config', JSON.stringify(cfg));
-  if(typeof emailjs !== 'undefined') emailjs.init(cfg.publicKey);
-  toast('Configuración de email guardada ✓', 'success');
-  renderConfig();
-}
-
-async function enviarReporteMensual() {
-  const cfg = loadEmailConfig();
-  if(!cfg.publicKey || !cfg.serviceId || !cfg.templateId || !cfg.toEmail) {
-    toast('Completá y guardá la configuración de EmailJS primero', 'error'); return;
-  }
-
-  const mes = state.activeMes;
-  const año = new Date().getFullYear();
-  const prev = prevMes(mes);
-
-  // ── A) DESCARGAR EXCEL ──────────────────────────────────────────────
-  const wb = XLSX.utils.book_new();
-  state.sucursales.forEach(suc => {
-    const ins = state.insumos.filter(i => i.sucursal === suc && getPrice(i, mes));
-    const cols = ['Insumo', 'Categoría', 'Proveedor', 'Precio ' + mes, 'Precio ' + (prev || 'anterior'), 'Variación %'];
-    const rows = [cols, ...ins.map(i => {
-      const cur = getPrice(i, mes);
-      const ant = prev ? getPrice(i, prev) : null;
-      const variacion = ant ? pct(ant, cur) : null;
-      return [i.nombre, i.categoria, i.proveedor || '', cur || '', ant || '', variacion ? variacion + '%' : '—'];
-    })];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), suc.slice(0, 31));
-  });
-  XLSX.writeFile(wb, `Reporte_${mes}_${año}.xlsx`);
-
-  // ── B) CONSTRUIR TABLA HTML y STATS ───────────────────────────────
-  let totalInsumos = 0, conAumento = 0, conBaja = 0;
-
-  const filas = [...state.sucursales].map(suc => {
-    const ins = state.insumos.filter(i => i.sucursal === suc && getPrice(i, mes));
-    return ins.map(i => {
-      const cur = getPrice(i, mes);
-      const ant = prev ? getPrice(i, prev) : null;
-      const variacion = ant ? parseFloat(pct(ant, cur)) : null;
-      totalInsumos++;
-      if(variacion !== null && variacion > 0) conAumento++;
-      if(variacion !== null && variacion < 0) conBaja++;
-      const varTexto = variacion !== null
-        ? `<span style="color:${variacion > 0 ? '#ef4444' : variacion < 0 ? '#22c55e' : '#9ca3af'}">${variacion > 0 ? '▲' : variacion < 0 ? '▼' : '—'} ${Math.abs(variacion)}%</span>`
-        : '—';
-      return `<tr>
-        <td style="padding:6px 10px;border-bottom:1px solid #252a38">${i.nombre}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #252a38;color:#9ca3af;font-size:12px">${i.categoria}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #252a38">${suc}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #252a38;font-weight:600">${fmt(cur)}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #252a38">${ant ? varTexto : '—'}</td>
-      </tr>`;
-    }).join('');
-  }).join('');
-
-  const tablaHtml = `
-<table style="width:100%;border-collapse:collapse;font-family:sans-serif;font-size:13px">
-  <thead>
-    <tr style="background:#1c2030">
-      <th style="padding:8px 10px;text-align:left;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:1px">Insumo</th>
-      <th style="padding:8px 10px;text-align:left;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:1px">Categoría</th>
-      <th style="padding:8px 10px;text-align:left;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:1px">Sucursal</th>
-      <th style="padding:8px 10px;text-align:left;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:1px">Precio ${mes}</th>
-      <th style="padding:8px 10px;text-align:left;color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:1px">Variación</th>
-    </tr>
-  </thead>
-  <tbody>${filas}</tbody>
-</table>`;
-
-  // ── C) ENVIAR EMAIL ───────────────────────────────────────────────
-  try {
-    toast('Enviando reporte...', 'info');
-    emailjs.init(cfg.publicKey);
-    await emailjs.send(cfg.serviceId, cfg.templateId, {
-      mes,
-      tabla_html:     tablaHtml,
-      total_insumos:  String(totalInsumos),
-      con_aumento:    String(conAumento),
-      con_baja:       String(conBaja),
-      to_email:       cfg.toEmail,
-    });
-    toast(`✅ Reporte ${mes} enviado y Excel descargado`, 'success');
-  } catch(e) {
-    toast('Error enviando email: ' + (e.text || e.message || 'Verificá la config'), 'error');
-  }
-}
-
-function renderConfig() {
-  const cfg = loadEmailConfig();
-  const status = document.getElementById('emailjsStatus');
-  if(status) {
-    if(cfg.publicKey && cfg.serviceId && cfg.templateId) {
-      status.className = 'fs-badge ok'; status.textContent = 'Configurado ✓';
-    } else {
-      status.className = 'fs-badge err'; status.textContent = 'Sin configurar';
-    }
-  }
-  if(cfg.publicKey) document.getElementById('ejPublicKey').value = cfg.publicKey;
-  if(cfg.serviceId) document.getElementById('ejServiceId').value = cfg.serviceId;
-  if(cfg.templateId) document.getElementById('ejTemplateId').value = cfg.templateId;
-  if(cfg.toEmail) document.getElementById('ejToEmail').value = cfg.toEmail;
-  const fsDetail = document.getElementById('fsStatusDetail');
-  if(fsDetail) {
-    fsDetail.innerHTML = firestoreOk
-      ? `<span class="fs-badge ok">🔥 Firestore activo — proyecto: <strong>basedatosnew86</strong></span>`
-      : `<span class="fs-badge err">❌ Sin conexión — usando localStorage como backup</span>`;
-  }
-}
-
-// ═══════════════════════════════════════════
 //   INIT
 // ═══════════════════════════════════════════
 function handleUnidadChange(sel) {
@@ -2554,36 +2462,139 @@ function cancelNewUnidad() {
   document.getElementById('mUnidad').value = '';
 }
 
-async function init() {
-  const overlay = document.getElementById('loadingOverlay');
-  const loadMsg = document.getElementById('loadingMsg');
 
-  // Init EmailJS si ya estaba configurado
-  const ejCfg = loadEmailConfig();
-  if(ejCfg.publicKey && typeof emailjs !== 'undefined') {
-    try { emailjs.init(ejCfg.publicKey); } catch(e) {}
-  }
 
-  // Conectar Firestore
-  loadMsg.textContent = 'Conectando a Firebase...';
-  await initFirestore();
+// ═══════════════════════════════════════════
+//   SPARKLINE
+// ═══════════════════════════════════════════
+function sparklineSVG(ins) {
+  // Get prices for all months in order
+  const prices = state.meses.map(m => ins.precios[m]).filter(p => p !== undefined && p !== null);
+  if(prices.length < 2) return '<span style="color:var(--muted);font-size:11px">—</span>';
 
-  if(firestoreOk) {
-    loadMsg.textContent = 'Cargando datos desde la nube...';
-    const loaded = await loadFromFirestore();
-    if(loaded) {
-      saveState(); // backup en localStorage
-      loadMsg.textContent = '✓ Datos cargados';
-    } else {
-      loadMsg.textContent = 'Sin datos en la nube — usando datos locales';
-    }
+  const w = 64, h = 28, pad = 2;
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const range = max - min || 1;
+  const n = prices.length;
+
+  const pts = prices.map((p, idx) => {
+    const x = pad + (idx / (n-1)) * (w - pad*2);
+    const y = h - pad - ((p - min) / range) * (h - pad*2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+
+  const last = prices[prices.length-1];
+  const prev2 = prices[prices.length-2];
+  const color = last > prev2 ? '#ef4444' : last < prev2 ? '#22c55e' : '#6b7280';
+  const lastPt = pts[pts.length-1].split(',');
+
+  return `<svg class="sparkline" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="2.5" fill="${color}"/>
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════
+//   TEMAS Y COLORES
+// ═══════════════════════════════════════════
+const THEMES = [
+  { name: 'Naranja',   accent: '#f5a623', leno: '#f5a623' },
+  { name: 'Azul',      accent: '#3b82f6', leno: '#3b82f6' },
+  { name: 'Verde',     accent: '#22c55e', leno: '#22c55e' },
+  { name: 'Rojo',      accent: '#ef4444', leno: '#ef4444' },
+  { name: 'Violeta',   accent: '#a78bfa', leno: '#a78bfa' },
+  { name: 'Rosa',      accent: '#f43f5e', leno: '#f43f5e' },
+  { name: 'Cyan',      accent: '#06b6d4', leno: '#06b6d4' },
+  { name: 'Lima',      accent: '#84cc16', leno: '#84cc16' },
+  { name: 'Blanco',    accent: '#e8eaf0', leno: '#e8eaf0' },
+];
+
+const LIGHT_VARS = {
+  '--bg': '#f0f2f7',
+  '--surface': '#ffffff',
+  '--surface2': '#e8eaf0',
+  '--border': '#d1d5db',
+  '--text': '#111827',
+  '--muted': '#6b7280',
+};
+const DARK_VARS = {
+  '--bg': '#0d0f14',
+  '--surface': '#151820',
+  '--surface2': '#1c2030',
+  '--border': '#252a38',
+  '--text': '#e8eaf0',
+  '--muted': '#6b7280',
+};
+
+function applyTheme(accentColor, isLight) {
+  const root = document.documentElement;
+  const modeVars = isLight ? LIGHT_VARS : DARK_VARS;
+  Object.entries(modeVars).forEach(([k,v]) => root.style.setProperty(k, v));
+  root.style.setProperty('--accent', accentColor);
+  root.style.setProperty('--leno', accentColor);
+  // Update nav active background with alpha
+  const hex = accentColor.replace('#','');
+  const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+  root.style.setProperty('--accent-alpha', `rgba(${r},${g},${b},0.12)`);
+  // Patch active nav
+  document.querySelectorAll('.nav-item.active').forEach(el => {
+    el.style.background = `rgba(${r},${g},${b},0.12)`;
+    el.style.color = accentColor;
+  });
+  // Save
+  localStorage.setItem('leno_accent', accentColor);
+  localStorage.setItem('leno_light', isLight ? '1' : '0');
+}
+
+function renderSwatches() {
+  const saved = localStorage.getItem('leno_accent') || '#f5a623';
+  const c = document.getElementById('swatches');
+  if(!c) return;
+  c.innerHTML = '';
+  THEMES.forEach(t => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (t.accent === saved ? ' active' : '');
+    s.style.background = t.accent;
+    s.title = t.name;
+    s.onclick = () => {
+      document.querySelectorAll('.swatch').forEach(x => x.classList.remove('active'));
+      s.classList.add('active');
+      const isLight = localStorage.getItem('leno_light') === '1';
+      applyTheme(t.accent, isLight);
+    };
+    c.appendChild(s);
+  });
+}
+
+function toggleMode() {
+  const isLight = localStorage.getItem('leno_light') !== '1';
+  const accent = localStorage.getItem('leno_accent') || '#f5a623';
+  applyTheme(accent, isLight);
+  const track = document.getElementById('modeTrack');
+  const label = document.getElementById('modeLabel');
+  if(isLight) {
+    track.classList.remove('on');
+    label.textContent = 'Modo claro';
   } else {
-    loadMsg.textContent = 'Modo offline — usando localStorage';
+    track.classList.add('on');
+    label.textContent = 'Modo oscuro';
   }
+}
 
-  // Ocultar overlay
-  setTimeout(() => { overlay.style.display = 'none'; }, 600);
+function loadSavedTheme() {
+  const accent = localStorage.getItem('leno_accent');
+  const isLight = localStorage.getItem('leno_light') === '1';
+  if(accent) applyTheme(accent, isLight);
+  const track = document.getElementById('modeTrack');
+  const label = document.getElementById('modeLabel');
+  if(!isLight) { track.classList.add('on'); label.textContent = 'Modo oscuro'; }
+  else { label.textContent = 'Modo claro'; }
+  renderSwatches();
+}
 
+function init() {
+  loadSavedTheme();
   renderSucPills();
   renderMonthTabs('dashMonthTabs');
   renderMonthTabs('insMonthTabs');

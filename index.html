@@ -840,8 +840,10 @@
           <span>Variaciones de precio — todos los insumos con cambio</span>
           <span id="varChartCount" style="font-size:11px;color:var(--muted);font-weight:400"></span>
         </div>
-        <div id="varChartWrap" style="position:relative;overflow-y:auto;">
-          <canvas id="varChart"></canvas>
+        <div style="max-height:520px;overflow-y:auto;overflow-x:hidden;">
+          <div id="varChartWrap" style="position:relative;">
+            <canvas id="varChart"></canvas>
+          </div>
         </div>
       </div>
 
@@ -1842,9 +1844,7 @@ function renderDashboard() {
   });
   const varColors = varData.map(v => v > 0 ? '#ef4444' : '#22c55e');
 
-  // Dynamic height: 32px per bar minimum
-  const barH = Math.max(32, Math.min(48, Math.floor(600 / (varItems.length || 1))));
-  const chartH = Math.max(200, varItems.length * barH + 40);
+  const chartH = Math.max(200, varItems.length * 36 + 40);
   const wrap = document.getElementById('varChartWrap');
   wrap.style.height = chartH + 'px';
   document.getElementById('varChartCount').textContent = varItems.length + ' insumos con variación';
@@ -1859,7 +1859,7 @@ function renderDashboard() {
         data: varData,
         backgroundColor: varColors,
         borderRadius: 4,
-        barThickness: barH - 10,
+        barThickness: 22,
       }]
     },
     options: {

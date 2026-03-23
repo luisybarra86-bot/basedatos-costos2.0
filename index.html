@@ -752,6 +752,173 @@
   #weatherWidget { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3; }
   #weatherWidget .w-time  { font-size: 13px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
   #weatherWidget .w-clima { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  /* ── AI ASSISTANT ── */
+  #aiBtn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 4px 16px rgba(245,166,35,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #aiBtn:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(245,166,35,0.55); }
+
+  #aiPanel {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 320px;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+  #aiPanel.open { transform: translateX(0); }
+
+  .ai-header {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .ai-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .ai-header-title span.dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+  }
+  .ai-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+  }
+  .ai-close:hover { color: var(--text); }
+
+  #aiMessages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #aiMessages::-webkit-scrollbar { width: 4px; }
+  #aiMessages::-webkit-scrollbar-track { background: transparent; }
+  #aiMessages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .ai-msg {
+    max-width: 90%;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .ai-msg.user {
+    align-self: flex-end;
+    background: var(--accent);
+    color: #000;
+    font-weight: 500;
+    border-bottom-right-radius: 3px;
+  }
+  .ai-msg.bot {
+    align-self: flex-start;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 3px;
+  }
+  .ai-msg.bot.typing { color: var(--muted); font-style: italic; }
+
+  .ai-suggestions {
+    padding: 0 14px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .ai-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+  .ai-chip:hover { color: var(--accent); border-color: var(--accent); }
+
+  .ai-input-row {
+    padding: 10px 14px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  #aiInput {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    font-family: inherit;
+    resize: none;
+    height: 38px;
+    line-height: 1.4;
+    transition: border-color 0.15s;
+  }
+  #aiInput:focus { border-color: var(--accent); }
+  #aiInput::placeholder { color: var(--muted); }
+  #aiSend {
+    background: var(--accent);
+    border: none;
+    color: #000;
+    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+  #aiSend:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -2951,6 +3118,151 @@ function initTopbarWidgets() {
 
 init();
 initTopbarWidgets();
+
+// ═══════════════════════════════════════════
+//   ASISTENTE IA — GEMINI
+// ═══════════════════════════════════════════
+const GEMINI_KEY = 'AIzaSyBrnlfGwrk5WqNVOZemsiv5ckAOS3iDyYs';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+
+let aiOpen = false;
+let aiLoading = false;
+const aiHistory = [];
+
+function buildAIContext() {
+  const mes = state.activeMes;
+  const meses = state.meses;
+  const mesPrev = meses[meses.indexOf(mes) - 1] || null;
+
+  const insumosCtx = state.insumos.map(i => {
+    const cur = i.precios?.[mes];
+    const prv = mesPrev ? i.precios?.[mesPrev] : null;
+    const diff = cur && prv ? (((cur - prv) / prv) * 100).toFixed(1) : null;
+    return `- ${i.nombre} [${i.categoria}] [${i.sucursal}]: $${cur ?? 'sin precio'}${diff !== null ? ` (${diff > 0 ? '+' : ''}${diff}% vs ${mesPrev})` : ''}${i.proveedor ? ` | Proveedor: ${i.proveedor}` : ''}`;
+  }).join('\n');
+
+  const histCtx = (state.historial || []).slice(-10).map(h =>
+    `- [${h.mes}] ${h.nombre} (${h.sucursal}): $${h.precioAnterior} → $${h.precioNuevo}`
+  ).join('\n') || 'Sin historial reciente.';
+
+  return `Eres un asistente de análisis de costos para una cadena de hamburguerías llamada LENO en Tucumán, Argentina.
+Tenés acceso a los datos actuales de la app. Respondé siempre en español, de forma concisa y útil.
+
+MES ACTIVO: ${mes}
+MESES DISPONIBLES: ${meses.join(', ')}
+SUCURSALES: ${state.sucursales.join(', ')}
+
+INSUMOS CON PRECIOS (${mes}):
+${insumosCtx}
+
+HISTORIAL RECIENTE DE CAMBIOS DE PRECIOS:
+${histCtx}
+
+Cuando te pregunten sobre variaciones, calculá y mostrá los porcentajes. Si comparan sucursales, agrupá por categoría.`;
+}
+
+function toggleAIPanel() {
+  aiOpen = !aiOpen;
+  document.getElementById('aiPanel').classList.toggle('open', aiOpen);
+  if (aiOpen) {
+    document.getElementById('aiInput').focus();
+    if (aiHistory.length === 0) {
+      appendAIMsg('bot', '¡Hola! Puedo ayudarte a analizar los costos. Preguntame lo que quieras sobre los insumos, precios o sucursales.');
+    }
+  }
+}
+
+function appendAIMsg(role, text) {
+  const msgs = document.getElementById('aiMessages');
+  const div = document.createElement('div');
+  div.className = `ai-msg ${role}`;
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function sendAIMessage(text) {
+  if (!text.trim() || aiLoading) return;
+  aiLoading = true;
+  document.getElementById('aiSend').disabled = true;
+  document.getElementById('aiInput').value = '';
+
+  appendAIMsg('user', text);
+  aiHistory.push({ role: 'user', text });
+
+  const typingEl = appendAIMsg('bot', 'Analizando datos…');
+  typingEl.classList.add('typing');
+
+  try {
+    const systemCtx = buildAIContext();
+    const recentHistory = aiHistory.slice(-8);
+    const contents = recentHistory.map(h => ({
+      role: h.role === 'user' ? 'user' : 'model',
+      parts: [{ text: h.text }]
+    }));
+
+    if (contents.length > 0 && contents[0].role === 'user') {
+      contents[0].parts[0].text = `${systemCtx}\n\nPregunta del usuario: ${contents[0].parts[0].text}`;
+    }
+
+    const res = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Error API');
+
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sin respuesta.';
+    typingEl.textContent = reply;
+    typingEl.classList.remove('typing');
+    aiHistory.push({ role: 'model', text: reply });
+
+  } catch (err) {
+    typingEl.textContent = `Error: ${err.message}`;
+    typingEl.classList.remove('typing');
+  }
+
+  aiLoading = false;
+  document.getElementById('aiSend').disabled = false;
+  document.getElementById('aiInput').focus();
+}
+
+function aiChipClick(text) {
+  sendAIMessage(text);
+}
 </script>
+
+<!-- ASISTENTE IA -->
+<button id="aiBtn" onclick="toggleAIPanel()" title="Asistente IA">💬</button>
+
+<div id="aiPanel">
+  <div class="ai-header">
+    <div class="ai-header-title">
+      <span class="dot"></span>
+      Asistente IA · Gemini
+    </div>
+    <button class="ai-close" onclick="toggleAIPanel()">✕</button>
+  </div>
+  <div id="aiMessages"></div>
+  <div class="ai-suggestions">
+    <button class="ai-chip" onclick="aiChipClick('¿Qué insumos subieron más este mes?')">¿Qué subió más?</button>
+    <button class="ai-chip" onclick="aiChipClick('¿Cuál es el insumo más caro?')">¿Insumo más caro?</button>
+    <button class="ai-chip" onclick="aiChipClick('Comparame LENO vs VIANDAS en lácteos')">LENO vs VIANDAS lácteos</button>
+    <button class="ai-chip" onclick="aiChipClick('¿Qué categoría acumula mayor gasto?')">Categoría más cara</button>
+    <button class="ai-chip" onclick="aiChipClick('¿Qué bajó de precio este mes?')">¿Qué bajó?</button>
+  </div>
+  <div class="ai-input-row">
+    <textarea id="aiInput" placeholder="Preguntame sobre los costos…" rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMessage(this.value);}"></textarea>
+    <button id="aiSend" onclick="sendAIMessage(document.getElementById('aiInput').value)">➤</button>
+  </div>
+</div>
+
 </body>
 </html>

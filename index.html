@@ -3120,10 +3120,11 @@ init();
 initTopbarWidgets();
 
 // ═══════════════════════════════════════════
-//   ASISTENTE IA — GEMINI
+//   ASISTENTE IA — GROQ
 // ═══════════════════════════════════════════
-const GEMINI_KEY = 'AIzaSyCCg5TZAzeVrDk38gmZILvyonDq_iLcSM0';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_KEY}`;
+const GROQ_KEY = 'REEMPLAZAR_CON_TU_GROQ_KEY';
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.1-8b-instant';
 
 let aiOpen = false;
 let aiLoading = false;
@@ -3196,29 +3197,32 @@ async function sendAIMessage(text) {
 
   try {
     const systemCtx = buildAIContext();
-    const recentHistory = aiHistory.slice(-8);
-    const contents = recentHistory.map(h => ({
-      role: h.role === 'user' ? 'user' : 'model',
-      parts: [{ text: h.text }]
-    }));
+    const messages = [
+      { role: 'system', content: systemCtx },
+      ...aiHistory.slice(-8).map(h => ({
+        role: h.role === 'user' ? 'user' : 'assistant',
+        content: h.text
+      }))
+    ];
 
-    if (contents.length > 0 && contents[0].role === 'user') {
-      contents[0].parts[0].text = `${systemCtx}\n\nPregunta del usuario: ${contents[0].parts[0].text}`;
-    }
-
-    const res = await fetch(GEMINI_URL, {
+    const res = await fetch(GROQ_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_KEY}`
+      },
       body: JSON.stringify({
-        contents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 1024 }
+        model: GROQ_MODEL,
+        messages,
+        temperature: 0.7,
+        max_tokens: 1024
       })
     });
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || 'Error API');
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sin respuesta.';
+    const reply = data.choices?.[0]?.message?.content || 'Sin respuesta.';
     typingEl.textContent = reply;
     typingEl.classList.remove('typing');
     aiHistory.push({ role: 'model', text: reply });

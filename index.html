@@ -3135,31 +3135,25 @@ function buildAIContext() {
   const meses = state.meses;
   const mesPrev = meses[meses.indexOf(mes) - 1] || null;
 
-  const insumosCtx = state.insumos.map(i => {
+  const insumosCtx = state.insumos.slice(0, 30).map(i => {
     const cur = i.precios?.[mes];
     const prv = mesPrev ? i.precios?.[mesPrev] : null;
     const diff = cur && prv ? (((cur - prv) / prv) * 100).toFixed(1) : null;
-    return `- ${i.nombre} [${i.categoria}] [${i.sucursal}]: $${cur ?? 'sin precio'}${diff !== null ? ` (${diff > 0 ? '+' : ''}${diff}% vs ${mesPrev})` : ''}${i.proveedor ? ` | Proveedor: ${i.proveedor}` : ''}`;
+    return `${i.nombre} [${i.categoria}] [${i.sucursal}]: $${cur ?? '-'}${diff !== null ? ` (${diff > 0 ? '+' : ''}${diff}%)` : ''}`;
   }).join('\n');
 
   const histCtx = (state.historial || []).slice(-10).map(h =>
-    `- [${h.mes}] ${h.nombre} (${h.sucursal}): $${h.precioAnterior} → $${h.precioNuevo}`
-  ).join('\n') || 'Sin historial reciente.';
+    `${h.nombre} (${h.sucursal}): $${h.precioAnterior}→$${h.precioNuevo}`
+  ).join('\n') || 'Sin cambios.';
 
-  return `Eres un asistente de análisis de costos para una cadena de hamburguerías llamada LENO en Tucumán, Argentina.
-Tenés acceso a los datos actuales de la app. Respondé siempre en español, de forma concisa y útil.
+  return `Asistente de costos de hamburguesería LENO, Tucumán. Respondé en español, breve y útil.
+Mes: ${mes} | Sucursales: ${state.sucursales.join(', ')}
 
-MES ACTIVO: ${mes}
-MESES DISPONIBLES: ${meses.join(', ')}
-SUCURSALES: ${state.sucursales.join(', ')}
-
-INSUMOS CON PRECIOS (${mes}):
+INSUMOS (${mes}):
 ${insumosCtx}
 
-HISTORIAL RECIENTE DE CAMBIOS DE PRECIOS:
-${histCtx}
-
-Cuando te pregunten sobre variaciones, calculá y mostrá los porcentajes. Si comparan sucursales, agrupá por categoría.`;
+CAMBIOS RECIENTES:
+${histCtx}`;
 }
 
 function toggleAIPanel() {
@@ -3199,7 +3193,7 @@ async function sendAIMessage(text) {
     const systemCtx = buildAIContext();
     const messages = [
       { role: 'system', content: systemCtx },
-      ...aiHistory.slice(-8).map(h => ({
+      ...aiHistory.slice(-4).map(h => ({
         role: h.role === 'user' ? 'user' : 'assistant',
         content: h.text
       }))

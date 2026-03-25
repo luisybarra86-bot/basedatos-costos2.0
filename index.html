@@ -1176,7 +1176,7 @@
            ondragover="e=>e.preventDefault()" ondrop="handleDrop(event)">
         <div class="import-icon">📂</div>
         <div class="import-title">Arrastrar archivo Excel o hacer clic</div>
-        <div class="import-sub">Formatos soportados: .xlsx, .xls — Columnas esperadas: Insumo, Categoría, Precio, Proveedor, Observaciones</div>
+        <div class="import-sub">Formatos soportados: .xlsx, .xls — Columnas esperadas: Insumo, Categoría, Precio nuevo, Proveedor, Observaciones, Sucursal, Unidad, Precio anterior (opcional)</div>
         <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFileImport(event)">
       </div>
 
@@ -1205,15 +1205,16 @@
             <th>C — Precio nuevo</th>
             <th>D — Proveedor</th>
             <th>E — Observaciones</th>
-            <th>F — Unidad</th>
-            <th>G — Precio anterior <span style='color:var(--accent)'>(opcional)</span></th>
+            <th>F — Sucursal</th>
+            <th>G — Unidad</th>
+            <th>H — Precio anterior <span style='color:var(--accent)'>(opcional)</span></th>
           </tr></thead>
           <tbody>
             <tr>
-              <td>Carne (Kgs)</td><td>CARNES</td><td>11950</td><td>-</td><td></td><td>kg</td><td>10950</td>
+              <td>Carne (Kgs)</td><td>CARNES</td><td>11950</td><td>-</td><td></td><td>VIANDAS</td><td>kg</td><td>10950</td>
             </tr>
             <tr>
-              <td>Pan Golden (und)</td><td>PANES</td><td>435.6</td><td>-</td><td></td><td>und</td><td>396</td>
+              <td>Pan Golden (und)</td><td>PANES</td><td>435.6</td><td>-</td><td></td><td>VIANDAS</td><td>und</td><td>396</td>
             </tr>
           </tbody>
         </table>
@@ -2796,8 +2797,11 @@ function confirmImport() {
     const precio = parseFloat(r[2]);
     const proveedor = String(r[3]||'').trim();
     const obs = String(r[4]||'').trim();
+    const sucursal = String(r[5]||'').trim() || suc;
+    const unidadImp = String(r[6]||'').trim();
+    const precioAnt = parseFloat(r[7]);
     if(!nombre) return;
-    let ins = state.insumos.find(i => i.nombre.toLowerCase() === nombre.toLowerCase() && i.sucursal === suc);
+    let ins = state.insumos.find(i => i.nombre.toLowerCase() === nombre.toLowerCase() && i.sucursal === sucursal);
     if(ins) {
       if(!isNaN(precio) && ins.precios[mes] !== precio) {
         setPrice(ins, mes, precio);
@@ -2805,9 +2809,7 @@ function confirmImport() {
       }
       if(proveedor) ins.proveedor = proveedor;
     } else {
-      const unidadImp = String(r[5]||'').trim();
-      const precioAnt = parseFloat(r[6]);
-      const nuevo = { id: uid(), nombre, categoria: categoria || 'SIN CATEGORÍA', sucursal: suc, unidad: unidadImp, precios: {}, proveedor, obs };
+      const nuevo = { id: uid(), nombre, categoria: categoria || 'SIN CATEGORÍA', sucursal: sucursal, unidad: unidadImp, precios: {}, proveedor, obs };
       if(!isNaN(precio)) {
         nuevo.precios[mes] = precio;
         // Col G = precio anterior: store on object AND in prev month if available
@@ -2840,9 +2842,9 @@ function cancelImport() {
 function downloadTemplate() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['Insumo','Categoría','Precio nuevo','Proveedor','Observaciones','Unidad','Precio anterior (opcional)'],
-    ['Carne (Kgs)','CARNES',11950,'Proveedor SA','','kg',10950],
-    ['Pan Golden (und)','PANES',435.6,'','Paq x 12','und',396],
+    ['Insumo','Categoría','Precio nuevo','Proveedor','Observaciones','Sucursal','Unidad','Precio anterior (opcional)'],
+    ['Carne (Kgs)','CARNES',11950,'Proveedor SA','','VIANDAS','kg',10950],
+    ['Pan Golden (und)','PANES',435.6,'','Paq x 12','VIANDAS','und',396],
   ]);
   XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
   XLSX.writeFile(wb, 'Plantilla_Importacion_Leno.xlsx');

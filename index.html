@@ -217,6 +217,10 @@
   .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
   .kpi-value { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; line-height: 1; }
   .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .kpi.clickable { cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
+  .kpi.clickable:hover { border-color: var(--muted); transform: translateY(-1px); }
+  .trend-filter-badge { display:flex; align-items:center; gap:8px; background:rgba(245,166,35,0.1); border:1px solid rgba(245,166,35,0.3); border-radius:6px; padding:5px 10px; font-size:12px; font-weight:500; color:var(--accent); }
+  .trend-filter-badge button { background:none; border:none; color:var(--accent); cursor:pointer; font-size:14px; line-height:1; padding:0 2px; }
 
   .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
 
@@ -1110,6 +1114,7 @@
             <th>Tendencia</th>
             <th>Variación</th>
             <th>Proveedor</th>
+            <th>Últ. modif.</th>
             <th></th>
           </tr></thead>
           <tbody id="insumosBody"></tbody>
@@ -1520,6 +1525,7 @@ function defaultState() {
     sortDir: 1,
     page: 1,
     perPage: 20,
+    trendFilter: null,
   };
 }
 
@@ -1829,10 +1835,23 @@ function goTo(page) {
   }
   if(page === 'insumos') renderTable();
   if(page === 'historial') renderHistorial();
+
   if(page === 'proveedores') renderProveedores();
   if(page === 'reportes') setupReportes();
   if(page === 'dashboard') renderDashboard();
   if(page === 'preciosFranquicia') pfRenderAll();
+}
+
+function goToInsumosFiltered(trend) {
+  state.trendFilter = trend;
+  state.page = 1;
+  goTo('insumos');
+}
+
+function clearTrendFilter() {
+  state.trendFilter = null;
+  state.page = 1;
+  renderTable();
 }
 
 // ═══════════════════════════════════════════
@@ -2092,22 +2111,22 @@ function renderDashboard() {
 
   const kpiGrid = document.getElementById('kpiGrid');
   kpiGrid.innerHTML = `
-    <div class="kpi orange">
+    <div class="kpi orange clickable" onclick="goToInsumosFiltered(null)">
       <div class="kpi-label">Total insumos</div>
       <div class="kpi-value" style="color:var(--accent)">${total}</div>
       <div class="kpi-sub">${mes} ${new Date().getFullYear()}</div>
     </div>
-    <div class="kpi red">
+    <div class="kpi red clickable" onclick="goToInsumosFiltered('up')">
       <div class="kpi-label">Con aumento</div>
       <div class="kpi-value" style="color:var(--red)">${subidos.length}</div>
       <div class="kpi-sub">${prev ? 'vs. '+prev : '—'}</div>
     </div>
-    <div class="kpi green">
+    <div class="kpi green clickable" onclick="goToInsumosFiltered('down')">
       <div class="kpi-label">Con baja</div>
       <div class="kpi-value" style="color:var(--green)">${bajados.length}</div>
       <div class="kpi-sub">${prev ? 'vs. '+prev : '—'}</div>
     </div>
-    <div class="kpi blue">
+    <div class="kpi blue clickable" onclick="goToInsumosFiltered('same')">
       <div class="kpi-label">Sin cambio</div>
       <div class="kpi-value" style="color:var(--viandas)">${sinCambio.length}</div>
       <div class="kpi-sub">${prev ? 'vs. '+prev : '—'}</div>
@@ -2277,10 +2296,32 @@ function renderTable() {
   const catF = document.getElementById('catFilter')?.value || '';
   const sucF = document.getElementById('sucFilter')?.value || '';
 
+  // Badge de filtro activo
+  const toolbar = document.querySelector('#view-insumos .table-toolbar');
+  let badge = document.getElementById('trendFilterBadge');
+  if (state.trendFilter) {
+    const labels = { up: '🔴 Con aumento', down: '🟢 Con baja', same: '⚫ Sin cambio' };
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'trendFilterBadge';
+      badge.className = 'trend-filter-badge';
+      toolbar?.appendChild(badge);
+    }
+    badge.innerHTML = `Filtro: ${labels[state.trendFilter]} <button onclick="clearTrendFilter()" title="Limpiar filtro">✕</button>`;
+  } else if (badge) {
+    badge.remove();
+  }
+
   let filtered = state.insumos.filter(i => {
     if(!i.nombre.toLowerCase().includes(search)) return false;
     if(catF && i.categoria !== catF) return false;
     if(sucF && i.sucursal !== sucF) return false;
+    if(state.trendFilter) {
+      const p = prev ? getPrice(i, prev) : null;
+      const c = getPrice(i, mes);
+      const t = getTrend(p, c);
+      if(t !== state.trendFilter) return false;
+    }
     return true;
   });
 
@@ -2303,7 +2344,7 @@ function renderTable() {
 
   const tbody = document.getElementById('insumosBody');
   if(!paged.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="no-results">Sin resultados</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="no-results">Sin resultados</td></tr>`;
   } else {
     tbody.innerHTML = paged.map(i => {
       const cur = getPrice(i, mes);
@@ -2311,6 +2352,16 @@ function renderTable() {
       const trend = getTrend(prv, cur);
       const diff = pct(prv, cur);
       const sucCls = i.sucursal === 'LENO' ? 'leno' : i.sucursal === 'VIANDAS' ? 'viandas' : '';
+      const histEntries = state.historial.filter(h => h.insumoId === i.id || h.nombre === i.nombre);
+      let ultMod = '—';
+      if (histEntries.length) {
+        const last = histEntries.reduce((a, b) => ((a.ts||0) > (b.ts||0) ? a : b));
+        if (last.fecha) {
+          const parts = last.fecha.split('/');
+          if (parts.length === 3) ultMod = `${parts[0]}/${parts[1]}/${String(parts[2]).slice(-2)}`;
+          else ultMod = last.fecha;
+        }
+      }
       return `<tr data-id="${i.id}">
         <td>${i.nombre}${i.obs ? `<br><span style="font-size:11px;color:var(--muted)">${i.obs}</span>` : ''}</td>
         <td><span class="cat-badge">${i.categoria}</span></td>
@@ -2321,6 +2372,7 @@ function renderTable() {
         <td>${sparklineSVG(i)}</td>
         <td>${cur ? `<span class="trend ${trend}">${trend==='up'?'▲':trend==='down'?'▼':'—'} ${diff !== null ? Math.abs(diff)+'%' : '—'}</span>` : '—'}</td>
         <td style="color:var(--muted);font-size:12px">${i.proveedor || '—'}</td>
+        <td style="color:var(--muted);font-size:11px;white-space:nowrap">${ultMod}</td>
         <td>
           <div class="row-actions">
             <button class="action-btn" onclick="openPrecioModal('${i.id}')">💲 Precio</button>

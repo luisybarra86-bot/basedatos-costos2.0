@@ -919,6 +919,28 @@
     transition: opacity 0.15s;
   }
   #aiSend:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── PRECIOS FRANQUICIA ── */
+  .pf-history-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  .markup-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .markup-pos { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .markup-neg { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+  .markup-null { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .pf-editable-cell { cursor: text; transition: color 0.15s; }
+  .pf-editable-cell:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -957,6 +979,15 @@
     </button>
     <button class="nav-item" onclick="goTo('importar')">
       <span class="nav-icon">⬆️</span> Importar Excel
+    </button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Franquicias</div>
+    <button class="nav-item" onclick="goTo('preciosFranquicia')">
+      <span class="nav-icon">🏷️</span> Precios Franquicia
     </button>
   </div>
 
@@ -1223,6 +1254,49 @@
       </div>
     </div>
 
+    <!-- ════ PRECIOS FRANQUICIA ════ -->
+    <div class="view" id="view-preciosFranquicia">
+
+      <!-- KPIs -->
+      <div class="kpi-grid" id="pfKpiGrid" style="margin-bottom:20px"></div>
+
+      <!-- Últimos cambios -->
+      <div class="pf-history-panel">
+        <div class="card-title" style="margin-bottom:12px">📋 Últimos cambios de precio</div>
+        <div id="pfHistPanel">
+          <div class="no-results" style="padding:20px">Sin cambios registrados</div>
+        </div>
+      </div>
+
+      <!-- Tabla principal -->
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <input class="search-box" id="pfSearch" placeholder="🔍  Buscar producto..." oninput="pfRenderTable()">
+          <select class="filter-sel" id="pfCatFilter" onchange="pfRenderTable()">
+            <option value="">Todas las categorías</option>
+          </select>
+          <button class="btn btn-primary" onclick="pfOpenAddModal()">+ Agregar producto</button>
+          <button class="btn btn-ghost" onclick="pfExportExcel()">⬇️ Exportar Excel</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th class="sortable" onclick="pfSort('nombre')">Producto ↕</th>
+            <th class="sortable" onclick="pfSort('categoria')">Categoría ↕</th>
+            <th class="sortable" onclick="pfSort('precioCompra')">P.Compra ↕</th>
+            <th class="sortable" onclick="pfSort('precioVenta')">P.Venta ↕</th>
+            <th class="sortable" onclick="pfSort('markup')">Markup ↕</th>
+            <th>Últ.actualización</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="pfTableBody"></tbody>
+        </table>
+        <div class="pagination">
+          <span id="pfPageInfo"></span>
+          <div class="page-btns" id="pfPageBtns"></div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </main>
 </div>
@@ -1370,6 +1444,49 @@
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('precioModal')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmPrecio()">Actualizar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL PRODUCTO FRANQUICIA ════ -->
+<div class="overlay" id="pfProductoModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="pfModalTitle">AGREGAR PRODUCTO</span>
+      <button class="modal-close" onclick="closeModal('pfProductoModal')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Nombre del producto</label>
+        <input class="form-input" id="pfNombre" placeholder="Ej: Medallón de carne 100g">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <select class="form-input" id="pfCategoria" onchange="pfHandleCatChange(this)">
+          <option value="">Seleccionar...</option>
+        </select>
+        <div id="pfNewCatRow" style="display:none; flex-direction:row; gap:6px; margin-top:6px;">
+          <input class="form-input" id="pfNewCatInput" placeholder="Nueva categoría...">
+          <button type="button" class="btn btn-primary btn-sm" onclick="pfConfirmNewCat()">+ Agregar</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="pfCancelNewCat()">✕</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Precio de compra</label>
+        <input class="form-input" id="pfPrecioCompra" type="number" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Precio de venta</label>
+        <input class="form-input" id="pfPrecioVenta" type="number" placeholder="0.00">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label">Notas</label>
+        <input class="form-input" id="pfNotas" placeholder="Observaciones adicionales">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('pfProductoModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="pfSaveProducto()">Guardar</button>
     </div>
   </div>
 </div>
@@ -1689,6 +1806,7 @@ const pageTitles = {
   proveedores: ['PROVEEDORES','Directorio de proveedores'],
   reportes: ['REPORTES','Generar y exportar reportes'],
   importar: ['IMPORTAR EXCEL','Carga masiva de insumos'],
+  preciosFranquicia: ['PRECIOS FRANQUICIA','Lista de precios para franquiciados'],
 };
 
 function goTo(page) {
@@ -1704,6 +1822,8 @@ function goTo(page) {
   const ta = document.getElementById('topbarActions');
   if(page === 'insumos') {
     ta.innerHTML = `<button class="btn btn-ghost" onclick="exportAllExcel()">⬇️ Exportar Excel</button><button class="btn btn-primary" onclick="openAddModal()">+ Agregar insumo</button>`;
+  } else if(page === 'preciosFranquicia') {
+    ta.innerHTML = `<button class="btn btn-ghost" onclick="pfExportExcel()">⬇️ Exportar Excel</button><button class="btn btn-primary" onclick="pfOpenAddModal()">+ Agregar producto</button>`;
   } else {
     ta.innerHTML = `<button class="btn btn-ghost" onclick="exportAllExcel()">⬇️ Exportar Excel</button>`;
   }
@@ -1712,6 +1832,7 @@ function goTo(page) {
   if(page === 'proveedores') renderProveedores();
   if(page === 'reportes') setupReportes();
   if(page === 'dashboard') renderDashboard();
+  if(page === 'preciosFranquicia') pfRenderAll();
 }
 
 // ═══════════════════════════════════════════
@@ -3070,6 +3191,7 @@ async function init() {
   refreshCatSelects();
   refreshSucSelects();
   renderDashboard();
+  await pfInit();
   if (_fbOk) toast('Datos cargados ✓', 'success');
 }
 
@@ -3235,6 +3357,507 @@ async function sendAIMessage(text) {
 
 function aiChipClick(text) {
   sendAIMessage(text);
+}
+
+// ═══════════════════════════════════════════
+//   MÓDULO PRECIOS FRANQUICIA
+// ═══════════════════════════════════════════
+
+const PF_CATS_DEFAULT = [
+  'Packaging','Artículos varios franquicias','Cartelería','Salsas',
+  'Medallones de carne','Bacon','Pollo','Mc and cheese','Medallones veggies','Puré con gravy'
+];
+
+let pfState = {
+  productos: [],
+  historial: [],
+  categorias: [...PF_CATS_DEFAULT],
+  editingId: null,
+  sortCol: 'nombre',
+  sortDir: 1,
+  page: 1,
+  perPage: 25,
+};
+let _pfSyncedHistIds = new Set();
+
+// ─── Helpers ─────────────────────────────────
+function pfFmt(n) {
+  if (n === undefined || n === null || n === '') return '—';
+  return '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function pfCalcMarkup(precioCompra, precioVenta) {
+  if (!precioCompra || !precioVenta) return null;
+  return ((precioVenta - precioCompra) / precioCompra * 100);
+}
+
+function pfMarkupBadge(markup) {
+  if (markup === null || markup === undefined) return `<span class="markup-badge markup-null">—</span>`;
+  const cls = markup > 0 ? 'markup-pos' : markup < 0 ? 'markup-neg' : 'markup-null';
+  const sign = markup > 0 ? '+' : '';
+  return `<span class="markup-badge ${cls}">${sign}${markup.toFixed(1)}%</span>`;
+}
+
+function pfTodayStr() {
+  return new Date().toLocaleDateString('es-AR');
+}
+
+// ─── Firestore ──────────────────────────────
+async function pfLoad() {
+  if (!_fbOk) { pfRenderAll(); return; }
+  try {
+    const [prodSnap, histSnap, catsDoc] = await Promise.all([
+      db.collection('preciosFranquicia').get(),
+      db.collection('historialFranquicia').get(),
+      db.collection('categoriasFranquicia').doc('index').get(),
+    ]);
+    if (prodSnap.docs.length) {
+      pfState.productos = prodSnap.docs.map(d => d.data());
+    }
+    if (histSnap.docs.length) {
+      pfState.historial = histSnap.docs.map(d => d.data()).sort((a,b) => (a.ts||0)-(b.ts||0));
+      histSnap.docs.forEach(d => _pfSyncedHistIds.add(d.id));
+    }
+    if (catsDoc.exists) {
+      const saved = catsDoc.data().categorias || [];
+      pfState.categorias = [...new Set([...PF_CATS_DEFAULT, ...saved])];
+    }
+  } catch(e) {
+    console.warn('[PF] Error cargando Firestore:', e);
+  }
+  pfRenderAll();
+}
+
+async function pfSaveProducto_DB(prod) {
+  if (!_fbOk) return;
+  try { await db.collection('preciosFranquicia').doc(prod.id).set(prod); }
+  catch(e) { console.warn('[PF] Error guardando producto:', e); }
+}
+
+async function pfSaveHist_DB(entry) {
+  if (!_fbOk || _pfSyncedHistIds.has(entry.id)) return;
+  try {
+    await db.collection('historialFranquicia').doc(entry.id).set(entry);
+    _pfSyncedHistIds.add(entry.id);
+  } catch(e) { console.warn('[PF] Error guardando historial:', e); }
+}
+
+async function pfSaveCats_DB() {
+  if (!_fbOk) return;
+  try {
+    await db.collection('categoriasFranquicia').doc('index').set({
+      categorias: pfState.categorias,
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.warn('[PF] Error guardando categorías:', e); }
+}
+
+async function pfDeleteProducto_DB(id) {
+  if (!_fbOk) return;
+  try { await db.collection('preciosFranquicia').doc(id).delete(); }
+  catch(e) { console.warn('[PF] Error eliminando producto:', e); }
+}
+
+// ─── Render ──────────────────────────────────
+function pfRenderAll() {
+  pfRenderKPIs();
+  pfRenderHistPanel();
+  pfRenderTable();
+  pfRefreshCatSelects();
+}
+
+function pfRenderKPIs() {
+  const grid = document.getElementById('pfKpiGrid');
+  if (!grid) return;
+  const productos = pfState.productos;
+  const total = productos.length;
+  const sinVenta = productos.filter(p => !p.precioVenta).length;
+
+  let ultimaFecha = '—';
+  if (pfState.historial.length) {
+    const last = pfState.historial[pfState.historial.length - 1];
+    ultimaFecha = last.fecha || '—';
+  }
+
+  let mayorAumento = null, mayorAumentoNombre = '—';
+  if (pfState.historial.length) {
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    pfState.historial
+      .filter(h => {
+        if (!h.fecha) return false;
+        const parts = h.fecha.split('/').map(Number);
+        return parts[1] - 1 === mesActual && parts[2] === añoActual;
+      })
+      .forEach(h => {
+        if (!h.precioAnterior || !h.precioNuevo) return;
+        const p = ((h.precioNuevo - h.precioAnterior) / h.precioAnterior * 100);
+        if (mayorAumento === null || p > mayorAumento) {
+          mayorAumento = p; mayorAumentoNombre = h.nombre;
+        }
+      });
+  }
+
+  const mayorHTML = mayorAumento !== null
+    ? `<div class="kpi-value" style="color:var(--red);font-size:18px;line-height:1.2;margin-bottom:2px">${mayorAumentoNombre}</div><div class="kpi-sub" style="color:var(--red)">+${mayorAumento.toFixed(1)}%</div>`
+    : `<div class="kpi-value">—</div><div class="kpi-sub">Sin cambios este mes</div>`;
+
+  grid.innerHTML = `
+    <div class="kpi orange">
+      <div class="kpi-label">Total productos</div>
+      <div class="kpi-value" style="color:var(--accent)">${total}</div>
+      <div class="kpi-sub">en lista de precios</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Mayor aumento del mes</div>
+      ${mayorHTML}
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Sin precio de venta</div>
+      <div class="kpi-value" style="color:var(--viandas)">${sinVenta}</div>
+      <div class="kpi-sub">${sinVenta ? 'requieren actualización' : 'todos completos ✓'}</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Última actualización</div>
+      <div class="kpi-value" style="color:var(--green);font-size:22px">${ultimaFecha}</div>
+      <div class="kpi-sub">${pfState.historial.length} cambios registrados</div>
+    </div>
+  `;
+}
+
+function pfRenderHistPanel() {
+  const panel = document.getElementById('pfHistPanel');
+  if (!panel) return;
+  const hist = [...pfState.historial].reverse().slice(0, 20);
+  if (!hist.length) {
+    panel.innerHTML = '<div class="no-results" style="padding:20px">Sin cambios registrados</div>';
+    return;
+  }
+  const rows = hist.map(h => {
+    const diff = h.precioAnterior && h.precioNuevo
+      ? ((h.precioNuevo - h.precioAnterior) / h.precioAnterior * 100) : null;
+    const varHTML = diff !== null
+      ? `<span class="trend ${diff > 0 ? 'up' : diff < 0 ? 'down' : 'same'}">${diff > 0 ? '▲' : diff < 0 ? '▼' : '—'} ${Math.abs(diff).toFixed(1)}%</span>`
+      : '<span class="trend same">—</span>';
+    return `<tr>
+      <td style="color:var(--muted);font-size:12px">${h.fecha || '—'}</td>
+      <td style="font-weight:500">${h.nombre || '—'}</td>
+      <td><span class="cat-badge">${h.categoria || '—'}</span></td>
+      <td style="color:var(--muted)">${pfFmt(h.precioAnterior)}</td>
+      <td style="font-weight:600">${pfFmt(h.precioNuevo)}</td>
+      <td>${varHTML}</td>
+    </tr>`;
+  }).join('');
+  panel.innerHTML = `<div style="overflow-x:auto;max-height:220px;overflow-y:auto"><table style="width:100%">
+    <thead><tr>
+      <th>Fecha</th><th>Producto</th><th>Categoría</th>
+      <th>P.Anterior</th><th>P.Nuevo</th><th>Variación</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function pfRenderTable() {
+  const body = document.getElementById('pfTableBody');
+  if (!body) return;
+  const search = (document.getElementById('pfSearch')?.value || '').toLowerCase();
+  const cat = document.getElementById('pfCatFilter')?.value || '';
+
+  let items = pfState.productos.filter(p => {
+    const matchSearch = !search || (p.nombre||'').toLowerCase().includes(search) || (p.categoria||'').toLowerCase().includes(search);
+    const matchCat = !cat || p.categoria === cat;
+    return matchSearch && matchCat;
+  });
+
+  items.sort((a, b) => {
+    let va = pfState.sortCol === 'markup'
+      ? (pfCalcMarkup(a.precioCompra, a.precioVenta) ?? -Infinity)
+      : (a[pfState.sortCol] ?? '');
+    let vb = pfState.sortCol === 'markup'
+      ? (pfCalcMarkup(b.precioCompra, b.precioVenta) ?? -Infinity)
+      : (b[pfState.sortCol] ?? '');
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    return va < vb ? -pfState.sortDir : va > vb ? pfState.sortDir : 0;
+  });
+
+  const total = items.length;
+  const perPage = pfState.perPage;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  pfState.page = Math.min(pfState.page, totalPages);
+  const start = (pfState.page - 1) * perPage;
+  const pageItems = items.slice(start, start + perPage);
+
+  if (!pageItems.length) {
+    body.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏷️</div><div class="empty-title">Sin productos</div><div class="empty-sub">Usá "+ Agregar producto" para comenzar</div></div></td></tr>`;
+  } else {
+    body.innerHTML = pageItems.map(p => {
+      const markup = pfCalcMarkup(p.precioCompra, p.precioVenta);
+      const idSafe = p.id.replace(/['"]/g,'');
+      return `<tr>
+        <td style="font-weight:500">${p.nombre || '—'}</td>
+        <td><span class="cat-badge">${p.categoria || '—'}</span></td>
+        <td class="price-cell pf-editable-cell" onclick="pfInlineEdit(this,'${idSafe}','precioCompra')">${pfFmt(p.precioCompra)}</td>
+        <td class="price-cell pf-editable-cell" onclick="pfInlineEdit(this,'${idSafe}','precioVenta')">${pfFmt(p.precioVenta)}</td>
+        <td>${pfMarkupBadge(markup)}</td>
+        <td style="color:var(--muted);font-size:12px">${p.fechaActualizacion || '—'}</td>
+        <td><div class="row-actions">
+          <button class="action-btn" onclick="pfEditProducto('${idSafe}')">✏️</button>
+          <button class="action-btn del" onclick="pfDeleteProducto('${idSafe}')">🗑️</button>
+        </div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  const pi = document.getElementById('pfPageInfo');
+  if (pi) pi.textContent = `${Math.min(start+1,total)}–${Math.min(start+perPage,total)} de ${total} productos`;
+
+  const pb = document.getElementById('pfPageBtns');
+  if (pb) {
+    pb.innerHTML = '';
+    const prev = document.createElement('button');
+    prev.className = 'page-btn'; prev.textContent = '←'; prev.disabled = pfState.page <= 1;
+    prev.onclick = () => { pfState.page--; pfRenderTable(); };
+    pb.appendChild(prev);
+    for (let i = Math.max(1, pfState.page-2); i <= Math.min(totalPages, pfState.page+2); i++) {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (i === pfState.page ? ' active' : '');
+      btn.textContent = i;
+      btn.onclick = ((_i) => () => { pfState.page = _i; pfRenderTable(); })(i);
+      pb.appendChild(btn);
+    }
+    const next = document.createElement('button');
+    next.className = 'page-btn'; next.textContent = '→'; next.disabled = pfState.page >= totalPages;
+    next.onclick = () => { pfState.page++; pfRenderTable(); };
+    pb.appendChild(next);
+  }
+}
+
+function pfSort(col) {
+  if (pfState.sortCol === col) pfState.sortDir *= -1;
+  else { pfState.sortCol = col; pfState.sortDir = 1; }
+  pfState.page = 1;
+  pfRenderTable();
+}
+
+// ─── Edición inline ──────────────────────────
+function pfInlineEdit(cell, id, field) {
+  if (cell.querySelector('input')) return;
+  const prod = pfState.productos.find(p => p.id === id);
+  if (!prod) return;
+  const current = prod[field] || '';
+  const originalHTML = cell.innerHTML;
+
+  const input = document.createElement('input');
+  input.type = 'number'; input.value = current;
+  Object.assign(input.style, {
+    width:'90px', background:'var(--bg)', border:'1px solid var(--accent)',
+    borderRadius:'5px', color:'var(--text)', fontFamily:'DM Sans,sans-serif',
+    fontSize:'13px', padding:'3px 7px', outline:'none'
+  });
+  cell.innerHTML = '';
+  cell.appendChild(input);
+  input.focus(); input.select();
+
+  const commit = async () => {
+    const newVal = parseFloat(input.value);
+    if (isNaN(newVal) || newVal < 0) { cell.innerHTML = originalHTML; return; }
+    const oldVal = prod[field];
+    if (newVal === oldVal) { cell.innerHTML = originalHTML; return; }
+
+    const histEntry = {
+      id: uid(), ts: Date.now(), productoId: id,
+      nombre: prod.nombre, categoria: prod.categoria, campo: field,
+      precioAnterior: oldVal || null, precioNuevo: newVal, fecha: pfTodayStr(),
+    };
+    pfState.historial.push(histEntry);
+    pfSaveHist_DB(histEntry);
+
+    prod[field] = newVal;
+    prod.fechaActualizacion = pfTodayStr();
+    pfSaveProducto_DB(prod);
+
+    const row = cell.parentElement;
+    if (row && row.children[4]) {
+      row.children[4].innerHTML = pfMarkupBadge(pfCalcMarkup(prod.precioCompra, prod.precioVenta));
+    }
+
+    cell.innerHTML = pfFmt(newVal);
+    cell.classList.add('flash-green');
+    setTimeout(() => cell.classList.remove('flash-green'), 700);
+    pfRenderKPIs();
+    pfRenderHistPanel();
+    toast('Precio actualizado ✓', 'success');
+  };
+
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { cell.innerHTML = originalHTML; }
+  });
+}
+
+// ─── Modal agregar / editar ───────────────────
+function pfOpenAddModal(id = null) {
+  pfState.editingId = id;
+  document.getElementById('pfModalTitle').textContent = id ? 'EDITAR PRODUCTO' : 'AGREGAR PRODUCTO';
+  pfRefreshCatSelects();
+  if (id) {
+    const prod = pfState.productos.find(p => p.id === id);
+    if (prod) {
+      document.getElementById('pfNombre').value = prod.nombre || '';
+      document.getElementById('pfCategoria').value = prod.categoria || '';
+      document.getElementById('pfPrecioCompra').value = prod.precioCompra || '';
+      document.getElementById('pfPrecioVenta').value = prod.precioVenta || '';
+      document.getElementById('pfNotas').value = prod.notas || '';
+    }
+  } else {
+    document.getElementById('pfNombre').value = '';
+    document.getElementById('pfCategoria').value = '';
+    document.getElementById('pfPrecioCompra').value = '';
+    document.getElementById('pfPrecioVenta').value = '';
+    document.getElementById('pfNotas').value = '';
+  }
+  document.getElementById('pfNewCatRow').style.display = 'none';
+  document.getElementById('pfProductoModal').classList.add('open');
+}
+
+function pfEditProducto(id) { pfOpenAddModal(id); }
+
+async function pfSaveProducto() {
+  const nombre = document.getElementById('pfNombre').value.trim();
+  const categoria = document.getElementById('pfCategoria').value;
+  const precioCompra = parseFloat(document.getElementById('pfPrecioCompra').value) || null;
+  const precioVenta = parseFloat(document.getElementById('pfPrecioVenta').value) || null;
+  const notas = document.getElementById('pfNotas').value.trim();
+
+  if (!nombre) { toast('El nombre es requerido', 'error'); return; }
+  if (!categoria || categoria === '__nueva__') { toast('Seleccioná una categoría', 'error'); return; }
+
+  if (pfState.editingId) {
+    const prod = pfState.productos.find(p => p.id === pfState.editingId);
+    if (prod) {
+      if (precioCompra !== null && precioCompra !== prod.precioCompra) {
+        const h = { id: uid(), ts: Date.now(), productoId: prod.id, nombre: prod.nombre, categoria, campo: 'precioCompra', precioAnterior: prod.precioCompra, precioNuevo: precioCompra, fecha: pfTodayStr() };
+        pfState.historial.push(h); pfSaveHist_DB(h);
+      }
+      if (precioVenta !== null && precioVenta !== prod.precioVenta) {
+        const h = { id: uid(), ts: Date.now(), productoId: prod.id, nombre: prod.nombre, categoria, campo: 'precioVenta', precioAnterior: prod.precioVenta, precioNuevo: precioVenta, fecha: pfTodayStr() };
+        pfState.historial.push(h); pfSaveHist_DB(h);
+      }
+      Object.assign(prod, { nombre, categoria, precioCompra, precioVenta, notas, fechaActualizacion: pfTodayStr() });
+      await pfSaveProducto_DB(prod);
+      toast('Producto actualizado ✓', 'success');
+    }
+  } else {
+    const prod = { id: uid(), nombre, categoria, precioCompra, precioVenta, notas, fechaActualizacion: pfTodayStr() };
+    pfState.productos.push(prod);
+    await pfSaveProducto_DB(prod);
+    toast('Producto agregado ✓', 'success');
+  }
+
+  closeModal('pfProductoModal');
+  pfRenderAll();
+}
+
+async function pfDeleteProducto(id) {
+  const prod = pfState.productos.find(p => p.id === id);
+  if (!prod) return;
+  if (!confirm(`¿Eliminar "${prod.nombre}"?`)) return;
+  pfState.productos = pfState.productos.filter(p => p.id !== id);
+  await pfDeleteProducto_DB(id);
+  pfRenderAll();
+  toast('Producto eliminado', 'info');
+}
+
+// ─── Gestión de categorías en modal ──────────
+function pfHandleCatChange(sel) {
+  const row = document.getElementById('pfNewCatRow');
+  if (sel.value === '__nueva__') {
+    row.style.display = 'flex';
+    document.getElementById('pfNewCatInput').focus();
+  } else {
+    row.style.display = 'none';
+  }
+}
+
+async function pfConfirmNewCat() {
+  const val = document.getElementById('pfNewCatInput').value.trim();
+  if (!val) { toast('Escribí el nombre de la categoría', 'error'); return; }
+  if (!pfState.categorias.includes(val)) {
+    pfState.categorias.push(val);
+    await pfSaveCats_DB();
+    toast('Categoría "' + val + '" guardada ✓', 'success');
+  } else {
+    toast('Esa categoría ya existe', 'info');
+  }
+  pfRefreshCatSelects();
+  document.getElementById('pfCategoria').value = val;
+  document.getElementById('pfNewCatRow').style.display = 'none';
+  document.getElementById('pfNewCatInput').value = '';
+}
+
+function pfCancelNewCat() {
+  document.getElementById('pfNewCatRow').style.display = 'none';
+  document.getElementById('pfNewCatInput').value = '';
+  document.getElementById('pfCategoria').value = '';
+}
+
+function pfRefreshCatSelects() {
+  const cats = [...pfState.categorias].sort();
+
+  const sel = document.getElementById('pfCategoria');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Seleccionar...</option>';
+    cats.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    });
+    const oNew = document.createElement('option');
+    oNew.value = '__nueva__'; oNew.textContent = '+ Nueva categoría...';
+    oNew.style.color = 'var(--accent)'; oNew.style.fontWeight = '600';
+    sel.appendChild(oNew);
+    if (cur && cur !== '__nueva__') sel.value = cur;
+  }
+
+  const fsel = document.getElementById('pfCatFilter');
+  if (fsel) {
+    const cur = fsel.value;
+    fsel.innerHTML = '<option value="">Todas las categorías</option>';
+    cats.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      fsel.appendChild(o);
+    });
+    if (cur) fsel.value = cur;
+  }
+}
+
+// ─── Exportar Excel ───────────────────────────
+function pfExportExcel() {
+  const data = pfState.productos.map(p => ({
+    'Producto': p.nombre || '',
+    'Categoría': p.categoria || '',
+    'P.Compra': p.precioCompra || '',
+    'P.Venta': p.precioVenta || '',
+    'Markup %': pfCalcMarkup(p.precioCompra, p.precioVenta)?.toFixed(1) || '',
+    'Última actualización': p.fechaActualizacion || '',
+    'Notas': p.notas || '',
+  }));
+  if (!data.length) { toast('No hay productos para exportar', 'info'); return; }
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Precios Franquicia');
+  XLSX.writeFile(wb, `Precios_Franquicia_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.xlsx`);
+  toast('Excel exportado ✓', 'success');
+}
+
+// ─── Init del módulo ──────────────────────────
+async function pfInit() {
+  await pfLoad();
 }
 </script>
 

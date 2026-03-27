@@ -839,9 +839,120 @@
   .markup-null { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
   .pf-editable-cell { cursor: text; transition: color 0.15s; }
   .pf-editable-cell:hover { color: var(--accent); }
+
+  /* ── PIN SCREEN ── */
+  #pinScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  #pinScreen.hidden { display: none; }
+  .pin-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 36px 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    width: 320px;
+  }
+  .pin-logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+  }
+  .pin-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-align: center;
+    line-height: 1.2;
+  }
+  .pin-dots {
+    display: flex;
+    gap: 14px;
+  }
+  .pin-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: transparent;
+    transition: all 0.15s;
+  }
+  .pin-dot.filled {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .pin-error {
+    font-size: 13px;
+    color: var(--red);
+    min-height: 18px;
+    text-align: center;
+  }
+  .pin-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+  }
+  .pin-key {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 18px;
+    font-weight: 500;
+    padding: 14px 0;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+    user-select: none;
+  }
+  .pin-key:hover { background: var(--border); }
+  .pin-key:active { transform: scale(0.93); background: rgba(245,166,35,0.15); }
+  .pin-key.del { font-size: 20px; color: var(--muted); }
+  .pin-key.zero { grid-column: 2; }
 </style>
 </head>
 <body>
+
+<!-- PIN SCREEN -->
+<div id="pinScreen">
+  <div class="pin-box">
+    <img src="logo.png" alt="Logo" class="pin-logo" onerror="this.style.display='none'">
+    <div class="pin-title">LENO · Base de Datos Costos</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key zero" onclick="pinPress('0')">0</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+    </div>
+  </div>
+</div>
 
 <div class="app">
 
@@ -1409,6 +1520,53 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
+// ═══════════════════════════════════════════
+//   PIN DE ACCESO
+// ═══════════════════════════════════════════
+(function() {
+  const PIN_CORRECT = '2799';
+  const screen = document.getElementById('pinScreen');
+  if (sessionStorage.getItem('pinOk') === '1') {
+    screen.classList.add('hidden');
+    return;
+  }
+  let current = '';
+  function updateDots() {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('d' + i).classList.toggle('filled', i < current.length);
+    }
+  }
+  function pinError() {
+    document.getElementById('pinError').textContent = 'PIN incorrecto';
+    current = '';
+    updateDots();
+    setTimeout(() => { document.getElementById('pinError').textContent = ''; }, 1500);
+  }
+  window.pinPress = function(digit) {
+    if (current.length >= 4) return;
+    current += digit;
+    updateDots();
+    if (current.length === 4) {
+      if (current === PIN_CORRECT) {
+        sessionStorage.setItem('pinOk', '1');
+        screen.classList.add('hidden');
+      } else {
+        setTimeout(pinError, 120);
+      }
+    }
+  };
+  window.pinDel = function() {
+    current = current.slice(0, -1);
+    updateDots();
+    document.getElementById('pinError').textContent = '';
+  };
+  document.addEventListener('keydown', function(e) {
+    if (screen.classList.contains('hidden')) return;
+    if (e.key >= '0' && e.key <= '9') pinPress(e.key);
+    else if (e.key === 'Backspace') pinDel();
+  });
+})();
+
 // ═══════════════════════════════════════════
 //   ESTADO GLOBAL
 // ═══════════════════════════════════════════

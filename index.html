@@ -2256,6 +2256,18 @@ function renderDashboard() {
     }).join('');
   }
 
+  // Datos de variaciones (para resumen, sin gráfico)
+  const varItems = all.filter(i => {
+    const p = prev ? getPrice(i, prev) : getLastKnownPrice(i, mes);
+    const cv = getPrice(i, mes);
+    return p && cv && p !== cv;
+  });
+  const varData = varItems.map(i => {
+    const p = prev ? getPrice(i, prev) : getLastKnownPrice(i, mes);
+    const cv = getPrice(i, mes);
+    return +pct(p, cv);
+  });
+
   // Summary panel (right card): top increases and decreases
   const subieronn = varItems.filter((_,idx) => varData[idx] > 0);
   const bajaron = varItems.filter((_,idx) => varData[idx] < 0);

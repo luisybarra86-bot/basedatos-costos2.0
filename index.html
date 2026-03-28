@@ -1064,14 +1064,21 @@
       </div>
 
       <div class="chart-card" style="margin-bottom:24px">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
-          <span>Variaciones de precio — todos los insumos con cambio</span>
-          <span id="varChartCount" style="font-size:11px;color:var(--muted);font-weight:400"></span>
-        </div>
-        <div style="max-height:520px;overflow-y:auto;overflow-x:hidden;">
-          <div id="varChartWrap" style="position:relative;">
-            <canvas id="varChart"></canvas>
-          </div>
+        <div class="card-title">Últimos insumos agregados</div>
+        <div style="overflow-y:auto;max-height:360px;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">
+                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Insumo</th>
+                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Categoría</th>
+                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Sucursal</th>
+                <th style="padding:8px 12px;text-align:right;font-weight:600;border-bottom:1px solid var(--border)">Precio</th>
+                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Unidad</th>
+                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Agregado</th>
+              </tr>
+            </thead>
+            <tbody id="latestInsumosBody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -2221,78 +2228,33 @@ function renderDashboard() {
     options: { plugins: { legend: { position: 'right', labels: { color: '#6b7280', font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } }, maintainAspectRatio: false }
   });
 
-  // Var chart — ALL items with change, sorted by % variation
-  const varItems = all.filter(i => {
-    const p = prev ? getPrice(i, prev) : getLastKnownPrice(i, mes);
-    const cv = getPrice(i, mes);
-    return p && cv && p !== cv;
-  }).sort((a,b) => {
-    const pa = prev ? getPrice(a,prev) : getLastKnownPrice(a,mes);
-    const ca = getPrice(a,mes);
-    const pb = prev ? getPrice(b,prev) : getLastKnownPrice(b,mes);
-    const cb = getPrice(b,mes);
-    return +pct(pb,cb) - +pct(pa,ca);
-  });
-
-  const varLabels = varItems.map(i => i.nombre);
-  const varData = varItems.map(i => {
-    const p = prev ? getPrice(i,prev) : getLastKnownPrice(i,mes);
-    const cv = getPrice(i,mes);
-    return +pct(p,cv);
-  });
-  const varColors = varData.map(v => v > 0 ? '#ef4444' : '#22c55e');
-
-  const chartH = Math.max(200, varItems.length * 36 + 40);
-  const wrap = document.getElementById('varChartWrap');
-  wrap.style.height = chartH + 'px';
-  document.getElementById('varChartCount').textContent = varItems.length + ' insumos con variación';
-
-  if(varChartInst) varChartInst.destroy();
-  const ctx2 = document.getElementById('varChart').getContext('2d');
-  varChartInst = new Chart(ctx2, {
-    type: 'bar',
-    data: {
-      labels: varLabels,
-      datasets: [{
-        data: varData,
-        backgroundColor: varColors,
-        borderRadius: 4,
-        barThickness: 22,
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const i = varItems[ctx.dataIndex];
-              const p = prev ? getPrice(i,prev) : getLastKnownPrice(i,mes);
-              const cv = getPrice(i,mes);
-              const sign = ctx.raw > 0 ? '+' : '';
-              return [
-                ` Variación: ${sign}${ctx.raw}%`,
-                ` Anterior: ${fmt(p)}`,
-                ` Actual: ${fmt(cv)}`
-              ];
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          ticks: { color: '#6b7280', callback: v => v+'%' },
-          grid: { color: '#252a38' }
-        },
-        y: {
-          ticks: { color: '#c9cbd1', font: { size: 11 }, padding: 6 },
-          grid: { display: false }
-        }
-      },
-      maintainAspectRatio: false
-    }
-  });
+  // Panel — Últimos insumos agregados
+  const latest8 = [...state.insumos].slice(-8).reverse();
+  const latestTbody = document.getElementById('latestInsumosBody');
+  if (!latest8.length) {
+    latestTbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted)">No hay insumos registrados</td></tr>';
+  } else {
+    const _sucCls = s => s === 'LENO' ? 'leno' : s === 'VIANDAS' ? 'viandas' : '';
+    const _insCreatedAt = ins => {
+      try {
+        const ts = parseInt(ins.id.slice(0, 8), 36);
+        if (ts > 1000000000000) return new Date(ts).toLocaleDateString('es-AR');
+      } catch(e) {}
+      return '—';
+    };
+    latestTbody.innerHTML = latest8.map((ins, idx) => {
+      const cur = getPrice(ins, mes);
+      const isLast = idx === latest8.length - 1;
+      return `<tr style="border-bottom:${isLast ? 'none' : '1px solid var(--border)'}">
+        <td style="padding:10px 12px;font-weight:500">${ins.nombre}</td>
+        <td style="padding:10px 12px"><span class="cat-badge">${ins.categoria}</span></td>
+        <td style="padding:10px 12px"><span class="badge badge-${_sucCls(ins.sucursal)}">${ins.sucursal}</span></td>
+        <td style="padding:10px 12px;text-align:right;font-family:monospace">${fmt(cur)}</td>
+        <td style="padding:10px 12px;color:var(--muted)">${ins.unidad || '—'}</td>
+        <td style="padding:10px 12px;color:var(--muted);font-size:12px">${_insCreatedAt(ins)}</td>
+      </tr>`;
+    }).join('');
+  }
 
   // Summary panel (right card): top increases and decreases
   const subieronn = varItems.filter((_,idx) => varData[idx] > 0);

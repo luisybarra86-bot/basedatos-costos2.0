@@ -2807,7 +2807,7 @@ function renderTable() {
   // El filtro de sucursal usa el dropdown (si está), o la sucursal activa del sidebar
   const effectiveSucF = sucF || state.activeSuc || '';
   let filtered = state.insumos.filter(i => {
-    if(!i.nombre.toLowerCase().includes(search)) return false;
+    if(search && ![ i.nombre, i.categoria, i.proveedor, i.obs ].some(f => (f||'').toLowerCase().includes(search))) return false;
     if(catF && i.categoria !== catF) return false;
     if(effectiveSucF && i.sucursal !== effectiveSucF) return false;
     if(state.trendFilter) {
@@ -5276,6 +5276,22 @@ async function cotizDelete(id) {
   cotizRenderList();
   toast('Cotización eliminada', 'info');
 }
+
+// Atajo Ctrl+F / Cmd+F → foca el buscador de la vista activa
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+    const ids = ['searchInput','pfSearch','histSearch','provSearch','cotizSearch'];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el && el.offsetParent !== null) {
+        e.preventDefault();
+        el.focus();
+        el.select();
+        return;
+      }
+    }
+  }
+});
 </script>
 
 

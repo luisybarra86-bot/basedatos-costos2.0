@@ -1851,6 +1851,28 @@
   </div>
 </div>
 
+<!-- ════ MODAL NUEVO MES ════ -->
+<div class="overlay" id="addMesModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">
+      <span id="addMesTitle">NUEVO MES</span>
+      <button class="modal-close" onclick="closeModal('addMesModal')">✕</button>
+    </div>
+    <div style="padding:4px 0 20px">
+      <p style="color:var(--muted);font-size:13px;margin-bottom:18px" id="addMesDesc"></p>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)">
+        <input type="checkbox" id="addMesCopiar" checked style="accent-color:var(--accent);width:16px;height:16px">
+        <span style="font-size:13px">Copiar precios del mes anterior</span>
+      </label>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;padding-left:4px">Los precios se pueden editar luego insumo por insumo.</p>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal('addMesModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmAddMes()">Agregar mes</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -2355,19 +2377,52 @@ function renderMonthTabs(containerId) {
 }
 
 function addMes() {
-  const current = state.meses;
-  const available = MESES.filter(m => !current.includes(m));
+  const available = MESES.filter(m => !state.meses.includes(m));
   if(!available.length) { toast('Ya están todos los meses', 'info'); return; }
   const next = available[0];
-  const confirm = window.confirm(`¿Agregar "${next}" como nuevo mes?`);
-  if(!confirm) return;
+  const prev = state.meses[state.meses.length - 1];
+  document.getElementById('addMesTitle').textContent = `AGREGAR: ${next.toUpperCase()}`;
+  document.getElementById('addMesDesc').textContent = prev
+    ? `Se va a agregar "${next}" al listado de meses.`
+    : `Se va a agregar "${next}" como primer mes.`;
+  document.getElementById('addMesCopiar').closest('label').style.display = prev ? 'flex' : 'none';
+  openModal('addMesModal');
+}
+
+function confirmAddMes() {
+  const available = MESES.filter(m => !state.meses.includes(m));
+  if(!available.length) { closeModal('addMesModal'); return; }
+  const next = available[0];
+  const prev = state.meses[state.meses.length - 1];
+  const copiar = document.getElementById('addMesCopiar').checked && !!prev;
+
   state.meses.push(next);
   state.activeMes = next;
-  saveState();
-  renderMonthTabs('dashMonthTabs');
-  renderMonthTabs('insMonthTabs');
-  refreshMesSelects();
-  toast(`Mes "${next}" agregado`, 'success');
+
+  if(copiar) {
+    let count = 0;
+    state.insumos.forEach(ins => {
+      const precio = ins.precios[prev];
+      if(precio !== undefined && ins.precios[next] === undefined) {
+        ins.precios[next] = precio;
+        count++;
+        if(_fbOk && db) db.collection('leno_insumos').doc(ins.id).update({ [`precios.${next}`]: precio }).catch(() => {});
+      }
+    });
+    saveState();
+    closeModal('addMesModal');
+    renderMonthTabs('dashMonthTabs');
+    renderMonthTabs('insMonthTabs');
+    refreshMesSelects();
+    toast(`Mes "${next}" agregado · ${count} precios copiados de ${prev}`, 'success');
+  } else {
+    saveState();
+    closeModal('addMesModal');
+    renderMonthTabs('dashMonthTabs');
+    renderMonthTabs('insMonthTabs');
+    refreshMesSelects();
+    toast(`Mes "${next}" agregado`, 'success');
+  }
 }
 
 function refreshMesSelects() {

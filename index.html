@@ -1859,18 +1859,21 @@
 //   PIN DE ACCESO
 // ═══════════════════════════════════════════
 (function() {
-  const PIN_CORRECT = '2799';
-  const APP_EMAIL   = 'app-leno@lenodb.internal';
-  const APP_PASS    = 'LenoC0stos#2026';
+  // SHA-256 del PIN — para cambiar el PIN: calcular nuevo hash y reemplazar esta constante
+  const PIN_HASH = '60d6e8f7ae7a64bf1f0f75076e83e2af49a3bb5b5683b922b3518d0d56e90924';
   const screen = document.getElementById('pinScreen');
 
-  function _fbSignIn() {
-    try { firebase.auth().signInWithEmailAndPassword(APP_EMAIL, APP_PASS).catch(() => {}); } catch(e) {}
+  async function _hashPin(pin) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  async function _fbSignIn() {
+    try { await firebase.auth().signInAnonymously(); } catch(e) {}
   }
 
   if (sessionStorage.getItem('pinOk') === '1') {
     screen.classList.add('hidden');
-    // Re-autenticar silenciosamente si la sesión de Firebase expiró
     try {
       firebase.auth().onAuthStateChanged(user => { if (!user) _fbSignIn(); });
     } catch(e) {}
@@ -1889,14 +1892,14 @@
     updateDots();
     setTimeout(() => { document.getElementById('pinError').textContent = ''; }, 1500);
   }
-  window.pinPress = function(digit) {
+  window.pinPress = async function(digit) {
     if (current.length >= 4) return;
     current += digit;
     updateDots();
     if (current.length === 4) {
-      if (current === PIN_CORRECT) {
-        // Autenticar en Firebase antes de mostrar el app
-        _fbSignIn();
+      const hash = await _hashPin(current);
+      if (hash === PIN_HASH) {
+        await _fbSignIn();
         sessionStorage.setItem('pinOk', '1');
         screen.classList.add('hidden');
       } else {

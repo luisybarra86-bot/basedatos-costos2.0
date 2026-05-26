@@ -881,6 +881,59 @@
     .report-cards { grid-template-columns: 1fr; }
   }
 
+  /* ── RESPONSIVE MOBILE ── */
+  .hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .hamburger-btn:hover { background: var(--surface2); }
+
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 99;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.22s ease;
+      z-index: 200;
+    }
+    .sidebar.open {
+      transform: translateX(0);
+    }
+    .sidebar-backdrop.open {
+      display: block;
+    }
+    .main {
+      margin-left: 0;
+    }
+    .hamburger-btn {
+      display: block;
+    }
+    .topbar {
+      padding-left: 12px;
+    }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .table-toolbar { flex-wrap: wrap; }
+  }
+
+  @media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    .main { padding: 16px 12px; }
+  }
+
   /* ── BADGE ── */
   .badge {
     display: inline-block;
@@ -1189,7 +1242,8 @@
 <div class="app">
 
 <!-- SIDEBAR -->
-<aside class="sidebar">
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-title">LENO</div>
     <div class="logo-sub">Base de Datos Costos</div>
@@ -1259,6 +1313,7 @@
 <main class="main">
 
   <div class="topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú">☰</button>
     <div>
       <div class="page-title" id="pageTitle">DASHBOARD</div>
       <div class="page-sub" id="pageSub">Vista general de costos</div>
@@ -5331,6 +5386,25 @@ async function cotizDelete(id) {
   cotizRenderList();
   toast('Cotización eliminada', 'info');
 }
+
+// ── SIDEBAR MOBILE ──
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const b = document.getElementById('sidebarBackdrop');
+  const open = s.classList.toggle('open');
+  b.classList.toggle('open', open);
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
+}
+
+// Cerrar sidebar al navegar en mobile
+const _origGoTo = window.goTo;
+window.goTo = function(page) {
+  if (window.innerWidth <= 768) closeSidebar();
+  if (_origGoTo) _origGoTo(page);
+};
 
 // Atajo Ctrl+F / Cmd+F → foca el buscador de la vista activa
 document.addEventListener('keydown', function(e) {

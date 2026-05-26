@@ -1906,6 +1906,21 @@
   </div>
 </div>
 
+<!-- ════ MODAL CONFIRMACIÓN ════ -->
+<div class="overlay" id="confirmModal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">
+      <span id="confirmTitle">¿Confirmar acción?</span>
+      <button class="modal-close" onclick="closeModal('confirmModal')">✕</button>
+    </div>
+    <p id="confirmMsg" style="color:var(--muted);font-size:13px;padding:4px 0 20px"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal('confirmModal')">Cancelar</button>
+      <button class="btn btn-danger" id="confirmOkBtn">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════ MODAL NUEVO MES ════ -->
 <div class="overlay" id="addMesModal">
   <div class="modal" style="max-width:420px">
@@ -3119,13 +3134,15 @@ function saveInsumo() {
 }
 
 function deleteInsumo(id) {
-  if(!confirm('¿Eliminar este insumo?')) return;
-  state.insumos = state.insumos.filter(i => i.id !== id);
-  if (_fbOk) db.collection('leno_insumos').doc(id).delete().catch(e => console.warn('[LENO] delete insumo:', e));
-  saveState();
-  renderTable();
-  renderDashboard();
-  toast('Insumo eliminado', 'success');
+  const ins = state.insumos.find(i => i.id === id);
+  confirmDialog('¿Eliminar insumo?', `"${ins?.nombre || id}" será eliminado permanentemente.`, () => {
+    state.insumos = state.insumos.filter(i => i.id !== id);
+    if (_fbOk) db.collection('leno_insumos').doc(id).delete().catch(e => console.warn('[LENO] delete insumo:', e));
+    saveState();
+    renderTable();
+    renderDashboard();
+    toast('Insumo eliminado', 'success');
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -3603,12 +3620,14 @@ function saveProv() {
 }
 
 function deleteProv(id) {
-  if(!confirm('¿Eliminar este proveedor?')) return;
-  state.proveedores = state.proveedores.filter(p => p.id !== id);
-  if (_fbOk) db.collection('leno_proveedores').doc(id).delete().catch(e => console.warn('[LENO] delete prov:', e));
-  saveState();
-  renderProveedores();
-  toast('Proveedor eliminado', 'success');
+  const prov = state.proveedores.find(p => p.id === id);
+  confirmDialog('¿Eliminar proveedor?', `"${prov?.nombre || id}" será eliminado permanentemente.`, () => {
+    state.proveedores = state.proveedores.filter(p => p.id !== id);
+    if (_fbOk) db.collection('leno_proveedores').doc(id).delete().catch(e => console.warn('[LENO] delete prov:', e));
+    saveState();
+    renderProveedores();
+    toast('Proveedor eliminado', 'success');
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -4764,14 +4783,15 @@ async function pfSaveProducto() {
   pfRenderAll();
 }
 
-async function pfDeleteProducto(id) {
+function pfDeleteProducto(id) {
   const prod = pfState.productos.find(p => p.id === id);
   if (!prod) return;
-  if (!confirm(`¿Eliminar "${prod.nombre}"?`)) return;
-  pfState.productos = pfState.productos.filter(p => p.id !== id);
-  await pfDeleteProducto_DB(id);
-  pfRenderAll();
-  toast('Producto eliminado', 'info');
+  confirmDialog('¿Eliminar producto?', `"${prod.nombre}" será eliminado permanentemente.`, async () => {
+    pfState.productos = pfState.productos.filter(p => p.id !== id);
+    await pfDeleteProducto_DB(id);
+    pfRenderAll();
+    toast('Producto eliminado', 'info');
+  });
 }
 
 // ─── Sincronización precio insumo → precioCompra en Precios Franquicias ──
@@ -5377,14 +5397,24 @@ async function cotizSave() {
   toast('Cotización guardada ✓', 'success');
 }
 
-async function cotizDelete(id) {
+function cotizDelete(id) {
   const c = cotizState.cotizaciones.find(x => x.id === id);
   if (!c) return;
-  if (!confirm(`¿Eliminar la cotización "${c.nombre || c.id}"?`)) return;
-  cotizState.cotizaciones = cotizState.cotizaciones.filter(x => x.id !== id);
-  await cotizDelete_DB(id);
-  cotizRenderList();
-  toast('Cotización eliminada', 'info');
+  confirmDialog('¿Eliminar cotización?', `"${c.nombre || c.id}" será eliminada permanentemente.`, async () => {
+    cotizState.cotizaciones = cotizState.cotizaciones.filter(x => x.id !== id);
+    await cotizDelete_DB(id);
+    cotizRenderList();
+    toast('Cotización eliminada', 'info');
+  });
+}
+
+// ── CONFIRMACIÓN ──
+function confirmDialog(title, msg, onConfirm) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  const btn = document.getElementById('confirmOkBtn');
+  btn.onclick = () => { closeModal('confirmModal'); onConfirm(); };
+  openModal('confirmModal');
 }
 
 // ── SIDEBAR MOBILE ──

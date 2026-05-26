@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -108,6 +109,20 @@
   .nav-item.active { background: rgba(245,166,35,0.12); color: var(--accent); font-weight: 500; }
 
   .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  /* Mejora 6 — Badge contador sidebar */
+  .nav-badge {
+    margin-left: auto;
+    background: rgba(245,166,35,0.15);
+    color: var(--accent);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
+    border: 1px solid rgba(245,166,35,0.2);
+  }
 
   .sucursal-switcher {
     padding: 12px;
@@ -214,6 +229,25 @@
   .kpi.green::before { background: var(--green); }
   .kpi.red::before { background: var(--red); }
 
+  /* Mejora 1 — Gradiente de fondo */
+  .kpi.orange { background: linear-gradient(135deg, var(--surface) 0%, rgba(245,166,35,0.07) 100%); }
+  .kpi.red    { background: linear-gradient(135deg, var(--surface) 0%, rgba(239,68,68,0.07) 100%); }
+  .kpi.green  { background: linear-gradient(135deg, var(--surface) 0%, rgba(34,197,94,0.07) 100%); }
+  .kpi.blue   { background: linear-gradient(135deg, var(--surface) 0%, rgba(59,130,246,0.07) 100%); }
+
+  /* Mejora 3 — Icono ghost de fondo */
+  .kpi::after {
+    content: attr(data-icon);
+    position: absolute;
+    right: 10px;
+    bottom: 4px;
+    font-size: 52px;
+    opacity: 0.09;
+    pointer-events: none;
+    line-height: 1;
+    user-select: none;
+  }
+
   .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
   .kpi-value { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 1px; line-height: 1; }
   .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
@@ -222,18 +256,117 @@
   .trend-filter-badge { display:flex; align-items:center; gap:8px; background:rgba(245,166,35,0.1); border:1px solid rgba(245,166,35,0.3); border-radius:6px; padding:5px 10px; font-size:12px; font-weight:500; color:var(--accent); }
   .trend-filter-badge button { background:none; border:none; color:var(--accent); cursor:pointer; font-size:14px; line-height:1; padding:0 2px; }
 
-  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-
   .chart-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
+    margin-bottom: 24px;
   }
 
   .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
 
   .chart-wrap { position: relative; height: 220px; }
+
+  /* ── INSUMOS POR CATEGORÍA ── */
+  .cat-layout {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+  }
+
+  .donut-wrap {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    flex-shrink: 0;
+  }
+
+  .donut-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .donut-center-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .donut-center-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .cat-cards-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    align-content: start;
+  }
+
+  .cat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--cat-color);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.12s, border-color 0.12s;
+    cursor: default;
+  }
+
+  .cat-card:hover { transform: translateY(-1px); border-color: var(--cat-color); }
+
+  .cat-dot {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    background: var(--cat-color);
+    opacity: 0.16;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  /* override opacity only on the icon inside */
+  .cat-card .cat-dot { position: relative; }
+  .cat-card .cat-dot span { position: relative; opacity: 1; }
+
+  .cat-info { flex: 1; min-width: 0; }
+
+  .cat-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: capitalize;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cat-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  .cat-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; }
+  .cat-bar { height: 3px; border-radius: 2px; background: var(--cat-color); opacity: 0.7; }
+
+  .cat-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--cat-color);
+    flex-shrink: 0;
+  }
 
   /* ── TABLE ── */
   .table-wrap {
@@ -510,6 +643,35 @@
   }
 
   .report-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+
+  /* ── COMPARACIÓN DE MESES ── */
+  .comp-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 16px; }
+  .comp-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .comp-header h3 { font-size: 14px; font-weight: 600; }
+  .comp-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .comp-vs { font-size: 11px; font-weight: 700; color: var(--muted); }
+  .comp-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 14px; }
+  .comp-sum-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; text-align: center; }
+  .comp-sum-val { font-size: 22px; font-weight: 700; }
+  .comp-sum-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .comp-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+  .comp-table-wrap { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .comp-table th { background: var(--surface2); color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  .comp-table th.right { text-align: right; }
+  .comp-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .comp-table tr:last-child td { border-bottom: none; }
+  .comp-table tr:hover td { background: var(--surface2); }
+  .comp-name { font-weight: 600; color: var(--text); }
+  .comp-cat { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .comp-price { text-align: right; font-weight: 500; color: var(--muted); }
+  .comp-var { text-align: right; font-weight: 700; font-size: 12px; }
+  .var-up-strong { background: rgba(239,68,68,0.18) !important; color: #f87171; }
+  .var-up-mid    { background: rgba(239,68,68,0.10) !important; color: #fca5a5; }
+  .var-up-low    { background: rgba(239,68,68,0.05) !important; color: var(--muted); }
+  .var-dn-strong { background: rgba(34,197,94,0.18) !important; color: #4ade80; }
+  .var-dn-mid    { background: rgba(34,197,94,0.10) !important; color: #86efac; }
+  .var-eq        { background: transparent !important; color: var(--muted); }
 
   /* ── IMPORT ZONE ── */
   .import-zone {
@@ -839,6 +1001,10 @@
   .markup-null { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
   .pf-editable-cell { cursor: text; transition: color 0.15s; }
   .pf-editable-cell:hover { color: var(--accent); }
+  .pf-changed-row { background: rgba(245,166,35,0.07) !important; }
+  .pf-changed-row > td:first-child { border-left: 3px solid var(--accent); padding-left: 9px; }
+  .btn-visto { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); padding: 3px 8px; font-size: 11px; border-radius: 5px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; white-space: nowrap; }
+  .btn-visto:hover { background: rgba(34,197,94,0.25); }
 
   /* ── PIN SCREEN ── */
   #pinScreen {
@@ -922,6 +1088,72 @@
   .pin-key:active { transform: scale(0.93); background: rgba(245,166,35,0.15); }
   .pin-key.del { font-size: 20px; color: var(--muted); }
   .pin-key.zero { grid-column: 2; }
+  tr.inactivo td { opacity: 0.42; }
+  tr.inactivo { background: rgba(107,114,128,0.08); }
+  tr.inactivo td:first-child::after { content: ' · INACTIVO'; font-size:10px; color:var(--muted); font-weight:600; letter-spacing:1px; margin-left:6px; }
+
+  /* ── COTIZACIONES ── */
+  .cotiz-list { display: flex; flex-direction: column; gap: 12px; }
+  .cotiz-empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+  .cotiz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.15s;
+  }
+  .cotiz-card:hover { border-color: var(--muted); }
+  .cotiz-card-main { flex: 1; min-width: 0; }
+  .cotiz-card-title { font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 4px; }
+  .cotiz-card-meta { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+  .cotiz-card-winner { font-size: 12px; color: var(--green); font-weight: 600; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 5px; padding: 3px 8px; white-space: nowrap; }
+  .cotiz-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .cotiz-comparacion { margin-top: 16px; }
+  .cotiz-cmp-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 600; }
+  .cotiz-cmp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cotiz-cmp-table th { text-align: left; padding: 7px 10px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; border-bottom: 1px solid var(--border); }
+  .cotiz-cmp-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .cotiz-cmp-table tr:last-child td { border-bottom: none; }
+  .cotiz-cmp-table tr.winner-row td { background: rgba(34,197,94,0.06); }
+  .cotiz-cmp-table tr.winner-row td:first-child { border-left: 3px solid var(--green); }
+  .cotiz-pct-up { color: var(--red); font-size: 11px; font-weight: 600; }
+  .cotiz-winner-badge { background: rgba(34,197,94,0.15); color: var(--green); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .cotiz-ahorro-bar { margin-top: 12px; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: 7px; padding: 10px 14px; font-size: 13px; color: var(--green); font-weight: 500; }
+  .cotiz-lineas-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  .cotiz-lineas-table th { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; padding: 6px 8px; text-align: left; }
+  .cotiz-lineas-table td { padding: 4px 4px; }
+  .cotiz-card-main { cursor: pointer; }
+  .cotiz-card-main:hover .cotiz-card-title { color: var(--accent); }
+  .cotiz-detail-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+  .cotiz-detail-kpi { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .cotiz-detail-kpi .dk-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .cotiz-detail-kpi .dk-value { font-size: 14px; font-weight: 600; color: var(--text); }
+
+  /* ── COTIZACIONES multi-insumo ── */
+  .cotiz-item-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .cotiz-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .cotiz-item-body { padding: 10px 12px; }
+  .cotiz-summary-section { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .cotiz-detail-item { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .cotiz-detail-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .cotiz-detail-item-title { font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -979,9 +1211,13 @@
     <div class="sidebar-label">Gestión</div>
     <button class="nav-item" onclick="goTo('historial')">
       <span class="nav-icon">📈</span> Historial
+      <span class="nav-badge" id="histBadge" style="display:none"></span>
     </button>
     <button class="nav-item" onclick="goTo('proveedores')">
       <span class="nav-icon">🤝</span> Proveedores
+    </button>
+    <button class="nav-item" onclick="goTo('cotizaciones')">
+      <span class="nav-icon">⚖️</span> Cotizaciones
     </button>
     <button class="nav-item" onclick="goTo('reportes')">
       <span class="nav-icon">📋</span> Reportes
@@ -1049,17 +1285,17 @@
 
       <div class="kpi-grid" id="kpiGrid"></div>
 
-      <div class="charts-grid">
-        <div class="chart-card">
-          <div class="card-title">Insumos por categoría <span id="catChartSuc" style="font-weight:400;font-size:11px;color:var(--muted)"></span></div>
-          <div class="chart-wrap"><canvas id="catChart"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
-            <span>Resumen variaciones</span>
-            <span id="varSummaryBadges" style="display:flex;gap:6px"></span>
+      <div class="chart-card">
+        <div class="card-title">Insumos por categoría <span id="catChartSuc" style="font-weight:400;font-size:11px;color:var(--muted)"></span></div>
+        <div class="cat-layout">
+          <div class="donut-wrap">
+            <canvas id="catChart"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-num" id="donutTotal">—</div>
+              <div class="donut-center-label">insumos</div>
+            </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto" id="varSummaryList"></div>
+          <div class="cat-cards-grid" id="catCardsGrid"></div>
         </div>
       </div>
 
@@ -1082,7 +1318,7 @@
         </div>
       </div>
 
-      <div class="table-wrap">
+      <div class="table-wrap" style="margin-bottom:24px">
         <div class="table-toolbar">
           <span style="font-size:13px;font-weight:600">Mayores aumentos recientes</span>
         </div>
@@ -1097,6 +1333,14 @@
           </tr></thead>
           <tbody id="topChangesBody"></tbody>
         </table>
+      </div>
+
+      <div class="chart-card">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Resumen variaciones</span>
+          <span id="varSummaryBadges" style="display:flex;gap:6px"></span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0;max-height:320px;overflow-y:auto" id="varSummaryList"></div>
       </div>
     </div>
 
@@ -1197,6 +1441,14 @@
       <div class="prov-grid" id="provGrid"></div>
     </div>
 
+    <!-- ════ COTIZACIONES ════ -->
+    <div class="view" id="view-cotizaciones">
+      <div style="margin-bottom:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+        <input class="search-box" id="cotizSearch" placeholder="🔍  Buscar cotización..." style="max-width:280px" oninput="cotizRenderList()">
+      </div>
+      <div class="cotiz-list" id="cotizList"></div>
+    </div>
+
     <!-- ════ REPORTES ════ -->
     <div class="view" id="view-reportes">
       <div class="report-cards">
@@ -1230,6 +1482,23 @@
           <select class="filter-sel" id="repCat" style="width:100%;margin-bottom:12px"></select>
           <button class="btn btn-primary" onclick="exportReporteCat()">⬇️ Descargar Excel</button>
         </div>
+      </div>
+
+      <!-- ── COMPARACIÓN DE MESES ── -->
+      <div class="comp-section">
+        <div class="comp-header">
+          <h3>🔀 Comparación de meses lado a lado</h3>
+          <div class="comp-controls">
+            <select class="filter-sel" id="compSuc" style="min-width:120px">
+              <option value="">Todas las sucursales</option>
+            </select>
+            <select class="filter-sel" id="compMes1"></select>
+            <span class="comp-vs">vs</span>
+            <select class="filter-sel" id="compMes2"></select>
+            <button class="btn btn-primary btn-sm" onclick="renderComparacion()">Ver comparación</button>
+          </div>
+        </div>
+        <div id="comp-result" style="display:none"></div>
       </div>
     </div>
 
@@ -1292,14 +1561,6 @@
       <!-- KPIs -->
       <div class="kpi-grid" id="pfKpiGrid" style="margin-bottom:20px"></div>
 
-      <!-- Últimos cambios -->
-      <div class="pf-history-panel">
-        <div class="card-title" style="margin-bottom:12px">📋 Últimos cambios de precio</div>
-        <div id="pfHistPanel">
-          <div class="no-results" style="padding:20px">Sin cambios registrados</div>
-        </div>
-      </div>
-
       <!-- Tabla principal -->
       <div class="table-wrap">
         <div class="table-toolbar">
@@ -1327,6 +1588,15 @@
           <div class="page-btns" id="pfPageBtns"></div>
         </div>
       </div>
+
+      <!-- Últimos cambios -->
+      <div class="pf-history-panel">
+        <div class="card-title" style="margin-bottom:12px">📋 Últimos cambios de precio</div>
+        <div id="pfHistPanel">
+          <div class="no-results" style="padding:20px">Sin cambios registrados</div>
+        </div>
+      </div>
+
     </div>
 
   </div><!-- /content -->
@@ -1397,6 +1667,11 @@
       <div class="form-group form-full">
         <label class="form-label">Observaciones</label>
         <input class="form-input" id="mObs" placeholder="Notas adicionales">
+      </div>
+      <div class="form-group form-full">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="mInactivo" style="width:15px;height:15px;accent-color:var(--muted)"> Marcar como inactivo
+        </label>
       </div>
     </div>
     <div class="form-actions">
@@ -1523,6 +1798,59 @@
   </div>
 </div>
 
+<!-- ════ MODAL DETALLE COTIZACIÓN ════ -->
+<div class="overlay" id="cotizDetailModal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-title">
+      <span id="cotizDetailTitle">DETALLE COTIZACIÓN</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" id="cotizDetailEditBtn" onclick="">✏️ Editar</button>
+        <button class="modal-close" onclick="closeModal('cotizDetailModal')">✕</button>
+      </div>
+    </div>
+    <div id="cotizDetailBody"></div>
+  </div>
+</div>
+
+<!-- ════ MODAL COTIZACIÓN ════ -->
+<div class="overlay" id="cotizModal">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-title">
+      <span id="cotizModalTitle">NUEVA COTIZACIÓN</span>
+      <button class="modal-close" onclick="closeModal('cotizModal')">✕</button>
+    </div>
+    <!-- Datos generales -->
+    <div class="form-grid">
+      <div class="form-group form-full">
+        <label class="form-label">Nombre de la cotización</label>
+        <input class="form-input" id="cotizNombre" placeholder="Ej: Compra semanal 15/01, Pedido mensual..." autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha</label>
+        <input class="form-input hist-date-input" id="cotizFecha" type="date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observaciones</label>
+        <input class="form-input" id="cotizObs" placeholder="Notas adicionales...">
+      </div>
+    </div>
+    <!-- Insumos -->
+    <div style="margin-top:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Insumos</span>
+        <button class="btn btn-ghost btn-sm" onclick="cotizAddItem()">+ Agregar insumo</button>
+      </div>
+      <div id="cotizItemsContainer"></div>
+    </div>
+    <!-- Comparación en vivo -->
+    <div id="cotizLiveComparacion" style="display:none" class="cotiz-comparacion"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('cotizModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="cotizSave()">💾 Guardar cotización</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -1532,11 +1860,23 @@
 // ═══════════════════════════════════════════
 (function() {
   const PIN_CORRECT = '2799';
+  const APP_EMAIL   = 'app-leno@lenodb.internal';
+  const APP_PASS    = 'LenoC0stos#2026';
   const screen = document.getElementById('pinScreen');
+
+  function _fbSignIn() {
+    try { firebase.auth().signInWithEmailAndPassword(APP_EMAIL, APP_PASS).catch(() => {}); } catch(e) {}
+  }
+
   if (sessionStorage.getItem('pinOk') === '1') {
     screen.classList.add('hidden');
+    // Re-autenticar silenciosamente si la sesión de Firebase expiró
+    try {
+      firebase.auth().onAuthStateChanged(user => { if (!user) _fbSignIn(); });
+    } catch(e) {}
     return;
   }
+
   let current = '';
   function updateDots() {
     for (let i = 0; i < 4; i++) {
@@ -1555,6 +1895,8 @@
     updateDots();
     if (current.length === 4) {
       if (current === PIN_CORRECT) {
+        // Autenticar en Firebase antes de mostrar el app
+        _fbSignIn();
         sessionStorage.setItem('pinOk', '1');
         screen.classList.add('hidden');
       } else {
@@ -1595,8 +1937,8 @@ function defaultState() {
     editingId: null,
     precioEditId: null,
     importData: null,
-    sortCol: 'nombre',
-    sortDir: 1,
+    sortCol: 'ultMod',
+    sortDir: -1,
     page: 1,
     perPage: 20,
     trendFilter: null,
@@ -1695,6 +2037,7 @@ function initFirebase() {
   try {
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
+    firebase.auth(); // inicializar Auth (mantiene la sesión activa)
     _fbOk = true;
   } catch(e) {
     console.warn('[LENO] Firebase no disponible, usando localStorage:', e);
@@ -1889,6 +2232,7 @@ const pageTitles = {
   reportes: ['REPORTES','Generar y exportar reportes'],
   importar: ['IMPORTAR EXCEL','Carga masiva de insumos'],
   preciosFranquicia: ['PRECIOS FRANQUICIA','Lista de precios para franquiciados'],
+  cotizaciones: ['COTIZACIONES','Comparación de precios entre proveedores'],
 };
 
 function goTo(page) {
@@ -1906,6 +2250,8 @@ function goTo(page) {
     ta.innerHTML = `<button class="btn btn-ghost" onclick="exportAllExcel()">⬇️ Exportar Excel</button><button class="btn btn-primary" onclick="openAddModal()">+ Agregar insumo</button>`;
   } else if(page === 'preciosFranquicia') {
     ta.innerHTML = `<button class="btn btn-ghost" onclick="pfExportExcel()">⬇️ Exportar Excel</button><button class="btn btn-primary" onclick="pfOpenAddModal()">+ Agregar producto</button>`;
+  } else if(page === 'cotizaciones') {
+    ta.innerHTML = `<button class="btn btn-primary" onclick="cotizOpenNew()">+ Nueva cotización</button>`;
   } else {
     ta.innerHTML = `<button class="btn btn-ghost" onclick="exportAllExcel()">⬇️ Exportar Excel</button>`;
   }
@@ -1916,12 +2262,20 @@ function goTo(page) {
   if(page === 'reportes') setupReportes();
   if(page === 'dashboard') renderDashboard();
   if(page === 'preciosFranquicia') pfRenderAll();
+  if(page === 'cotizaciones') cotizRenderList();
 }
 
 function goToInsumosFiltered(trend) {
   state.trendFilter = trend;
   state.page = 1;
   goTo('insumos');
+}
+
+function goToInsumosByCategoria(cat) {
+  state.page = 1;
+  goTo('insumos');
+  const sel = document.getElementById('catFilter');
+  if (sel) { sel.value = cat; renderTable(); }
 }
 
 function clearTrendFilter() {
@@ -1941,7 +2295,7 @@ function renderSucPills() {
     const pill = document.createElement('div');
     pill.className = `suc-pill ${s === 'LENO' ? 'leno' : s === 'VIANDAS' ? 'viandas' : 'add'} ${state.activeSuc === s ? 'active' : ''}`;
     pill.textContent = s;
-    pill.onclick = () => { state.activeSuc = s; saveState(); renderSucPills(); renderTable(); renderDashboard(); };
+    pill.onclick = () => { state.activeSuc = (state.activeSuc === s) ? null : s; saveState(); renderSucPills(); renderTable(); renderDashboard(); };
     c.appendChild(pill);
   });
   // Refresh sucursal selects
@@ -2026,16 +2380,19 @@ function refreshMesSelects() {
     });
     el.value = cur || state.activeMes;
   });
-  // Reportes selects
-  ['repMes1','repMes2'].forEach(id => {
+  // Reportes selects — repMes1 = primer mes, repMes2 = último mes por defecto
+  ['repMes1','repMes2'].forEach((id, idx) => {
     const el = document.getElementById(id);
     if(!el) return;
+    const cur = el.value;
     el.innerHTML = '';
     state.meses.forEach(m => {
       const o = document.createElement('option');
       o.value = m; o.textContent = m;
       el.appendChild(o);
     });
+    if(cur && state.meses.includes(cur)) el.value = cur;
+    else el.value = idx === 0 ? state.meses[0] : state.meses[state.meses.length - 1];
   });
 }
 
@@ -2106,25 +2463,68 @@ function cancelNewCat() {
 let catChartInst = null;
 let varChartInst = null;
 
+/* Mejora 2 — Contador animado para KPI values */
+function animateCount(el, target, delay) {
+  setTimeout(() => {
+    const duration = 650;
+    const start = performance.now();
+    function step(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * ease);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }, delay);
+}
+
+/* Mejora 6 — Badge de historial en sidebar */
+function updateHistBadge() {
+  const badge = document.getElementById('histBadge');
+  if (!badge) return;
+  const count = state.historial.filter(h => h.mes === state.activeMes).length;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
 function renderDashboard() {
   renderMonthTabs('dashMonthTabs');
   const mes = state.activeMes;
   const prev = prevMes(mes);
-  const all = state.insumos;
+  // Filtrar por sucursal activa (si hay una seleccionada)
+  const all = state.activeSuc ? state.insumos.filter(i => i.sucursal === state.activeSuc) : state.insumos;
+
+  // Deduplicar por nombre cuando se ven todas las sucursales juntas (mismos insumos en LENO y VIANDAS se muestran una vez)
+  const allForStats = !state.activeSuc ? (() => {
+    const seen = new Map();
+    all.forEach(i => {
+      const p = prev ? getPrice(i, prev) : getLastKnownPrice(i, mes);
+      const c = getPrice(i, mes);
+      const change = (p && c) ? Math.abs((c - p) / p) : 0;
+      if (!seen.has(i.nombre) || change > (seen.get(i.nombre)._change || 0)) {
+        seen.set(i.nombre, { ...i, _change: change });
+      }
+    });
+    return [...seen.values()];
+  })() : all;
 
   // KPIs
-  const total = all.filter(i => getPrice(i, mes)).length;
-  const subidos = all.filter(i => {
+  const total = allForStats.filter(i => getPrice(i, mes)).length;
+  const subidos = allForStats.filter(i => {
     const p = prev ? getPrice(i, prev) : null;
     const c = getPrice(i, mes);
     return p && c && c > p;
   });
-  const bajados = all.filter(i => {
+  const bajados = allForStats.filter(i => {
     const p = prev ? getPrice(i, prev) : null;
     const c = getPrice(i, mes);
     return p && c && c < p;
   });
-  const sinCambio = all.filter(i => {
+  const sinCambio = allForStats.filter(i => {
     const p = prev ? getPrice(i, prev) : null;
     const c = getPrice(i, mes);
     return p && c && c === p;
@@ -2187,49 +2587,95 @@ function renderDashboard() {
 
   const kpiGrid = document.getElementById('kpiGrid');
   kpiGrid.innerHTML = `
-    <div class="kpi orange clickable" onclick="goToInsumosFiltered(null)">
+    <div class="kpi orange clickable" data-icon="📦" onclick="goToInsumosFiltered(null)">
       <div class="kpi-label">Total insumos</div>
-      <div class="kpi-value" style="color:var(--accent)">${total}</div>
+      <div class="kpi-value" data-count="${total}" style="color:var(--accent)">0</div>
       <div class="kpi-sub">${mes} ${new Date().getFullYear()}</div>
     </div>
-    <div class="kpi red clickable" onclick="goToInsumosFiltered('up')">
+    <div class="kpi red clickable" data-icon="📈" onclick="goToInsumosFiltered('up')">
       <div class="kpi-label">Con aumento</div>
-      <div class="kpi-value" style="color:var(--red)">${subidos.length}</div>
+      <div class="kpi-value" data-count="${subidos.length}" style="color:var(--red)">0</div>
       <div class="kpi-sub">${prev ? 'vs. '+prev : '—'}</div>
     </div>
-    <div class="kpi green clickable" onclick="goToInsumosFiltered('down')">
+    <div class="kpi green clickable" data-icon="📉" onclick="goToInsumosFiltered('down')">
       <div class="kpi-label">Con baja</div>
-      <div class="kpi-value" style="color:var(--green)">${bajados.length}</div>
+      <div class="kpi-value" data-count="${bajados.length}" style="color:var(--green)">0</div>
       <div class="kpi-sub">${prev ? 'vs. '+prev : '—'}</div>
     </div>
-    <div class="kpi blue clickable" onclick="goToInsumosFiltered('same')">
+    <div class="kpi blue clickable" data-icon="➡️" onclick="goToInsumosFiltered('same')">
       <div class="kpi-label">Sin cambio</div>
-      <div class="kpi-value" style="color:var(--viandas)">${sinCambio.length}</div>
+      <div class="kpi-value" data-count="${sinCambio.length}" style="color:var(--viandas)">0</div>
       <div class="kpi-sub">${prev ? 'vs. '+prev : '—'}</div>
     </div>
     ${moverHTML}
     ${bajadaHTML}
   `;
 
+  // Mejora 2 — Animar contadores de KPIs
+  document.querySelectorAll('#kpiGrid .kpi-value[data-count]').forEach((el, i) => {
+    animateCount(el, parseInt(el.dataset.count) || 0, i * 80);
+  });
+
+  // Mejora 6 — Actualizar badge de historial
+  updateHistBadge();
+
   // Cat chart
   const catCounts = {};
-  all.filter(i => getPrice(i, mes)).forEach(i => {
+  allForStats.filter(i => getPrice(i, mes)).forEach(i => {
     catCounts[i.categoria] = (catCounts[i.categoria] || 0) + 1;
   });
   const catLabels = Object.keys(catCounts);
   const catData = catLabels.map(k => catCounts[k]);
-  const palette = ['#f5a623','#3b82f6','#22c55e','#ef4444','#a78bfa','#f43f5e','#0ea5e9','#84cc16','#fb923c','#e879f9','#14b8a6','#f59e0b','#64748b','#dc2626'];
+  const palette = ['#c4821a','#2d6bc4','#178a43','#b02d3a','#7c5fc7','#b03050','#0b7db5','#5e9412','#c46b1c','#b554c7','#0e8a7a','#b07a0a','#4a5568','#9b1c1c'];
+
+  const catTotal = catData.reduce((a,b) => a+b, 0);
+  const donutTotalEl = document.getElementById('donutTotal');
+  if (donutTotalEl) donutTotalEl.textContent = catTotal;
 
   if(catChartInst) catChartInst.destroy();
   const ctx1 = document.getElementById('catChart').getContext('2d');
   catChartInst = new Chart(ctx1, {
     type: 'doughnut',
-    data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: palette, borderWidth: 2, borderColor: '#151820' }] },
-    options: { plugins: { legend: { position: 'right', labels: { color: '#6b7280', font: { family: 'DM Sans', size: 11 }, boxWidth: 12 } } }, maintainAspectRatio: false }
+    data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: palette, borderWidth: 3, borderColor: '#151820', hoverOffset: 6 }] },
+    options: {
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => `  ${ctx.label}: ${ctx.parsed} (${catTotal ? Math.round(ctx.parsed/catTotal*100) : 0}%)` },
+          backgroundColor: '#1c2030', borderColor: '#252a38', borderWidth: 1,
+          titleColor: '#e8eaf0', bodyColor: '#6b7280', padding: 10
+        }
+      },
+      maintainAspectRatio: false,
+      animation: { duration: 500, easing: 'easeOutQuart' }
+    }
   });
 
+  // Cards de categorías
+  const catCardsGrid = document.getElementById('catCardsGrid');
+  if (catCardsGrid) {
+    const catIcons = {'PANES':'🍞','PAN':'🍞','CONGELADOS':'❄️','PULPAS - CONGELADOS':'❄️','CARNES':'🥩','CARNE':'🥩','SALSAS':'🧴','SALSA':'🧴','LACTEOS':'🧀','LÁCTEOS':'🧀','QUESOS / LACTEOS':'🧀','QUESOS':'🧀','BEBIDAS':'🥤','BEBIDA S/ALCOHOL':'🥤','BEBIDAS S/ALCOHOL':'🥤','BEBIDA C/ALCOHOL':'🍺','BEBIDAS C/ALCOHOL':'🍺','JUGOS':'🥤','VEGETALES':'🥬','VERDURAS':'🥬','CONDIMENTOS':'🫙','ADEREZOS':'🫙','ADEREZO':'🫙','ESPECIAS':'🌶️','PAPAS':'🍟','ACEITES':'🫒','ACEITE':'🫒','ENVASES':'📦','PACKAGING':'📦','LIMPIEZA':'🧹','DESCARTABLES':'🗑️','VARIOS':'📋','MERCADERIA':'🛒','MERCADERÍA':'🛒','MERCADERIA EN GRAL':'🛒','MERCADERÍA EN GRAL':'🛒','MERCADERIA EN GRAL.':'🛒','MERCADERÍA EN GRAL.':'🛒','PANCETA':'🥓','PARAFINADOS':'🕯️','PORCIONADOS':'🍽️','HELADOS':'🍦','POLLO':'🍗','EMBUTIDOS':'🌭'};
+    const catPairs = catLabels.map((label, i) => ({ label, count: catData[i], pct: catTotal ? Math.round(catData[i]/catTotal*100) : 0, color: palette[i % palette.length] }))
+      .sort((a,b) => b.count - a.count);
+    const maxPct = catPairs[0]?.pct || 1;
+    catCardsGrid.innerHTML = catPairs.map(c => {
+      const icon = catIcons[c.label.trim().toUpperCase()] || '📦';
+      const barW = Math.round((c.pct / maxPct) * 100);
+      return `<div class="cat-card" style="--cat-color:${c.color};cursor:pointer" onclick="goToInsumosByCategoria('${c.label.replace(/'/g,"\\'")}')">
+        <div class="cat-dot"><span style="font-size:15px;filter:brightness(5)">${icon}</span></div>
+        <div class="cat-info">
+          <div class="cat-name">${c.label}</div>
+          <div class="cat-sub">${c.count} insumo${c.count !== 1 ? 's' : ''}</div>
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:${barW}%"></div></div>
+        </div>
+        <div class="cat-pct">${c.pct}%</div>
+      </div>`;
+    }).join('');
+  }
+
   // Panel — Últimos insumos agregados
-  const latest8 = [...state.insumos].slice(-8).reverse();
+  const latest8 = [...(state.activeSuc ? state.insumos.filter(i => i.sucursal === state.activeSuc) : state.insumos)].slice(-8).reverse();
   const latestTbody = document.getElementById('latestInsumosBody');
   if (!latest8.length) {
     latestTbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted)">No hay insumos registrados</td></tr>';
@@ -2257,7 +2703,7 @@ function renderDashboard() {
   }
 
   // Datos de variaciones (para resumen, sin gráfico)
-  const varItems = all.filter(i => {
+  const varItems = allForStats.filter(i => {
     const p = prev ? getPrice(i, prev) : getLastKnownPrice(i, mes);
     const cv = getPrice(i, mes);
     return p && cv && p !== cv;
@@ -2355,10 +2801,12 @@ function renderTable() {
     badge.remove();
   }
 
+  // El filtro de sucursal usa el dropdown (si está), o la sucursal activa del sidebar
+  const effectiveSucF = sucF || state.activeSuc || '';
   let filtered = state.insumos.filter(i => {
     if(!i.nombre.toLowerCase().includes(search)) return false;
     if(catF && i.categoria !== catF) return false;
-    if(sucF && i.sucursal !== sucF) return false;
+    if(effectiveSucF && i.sucursal !== effectiveSucF) return false;
     if(state.trendFilter) {
       const p = prev ? getPrice(i, prev) : null;
       const c = getPrice(i, mes);
@@ -2368,12 +2816,24 @@ function renderTable() {
     return true;
   });
 
+  // Pre-calcular timestamp de última modificación por insumo para ordenamiento
+  const lastTsMap = {};
+  filtered.forEach(i => {
+    const entries = state.historial.filter(h => h.insumoId === i.id || h.nombre === i.nombre);
+    lastTsMap[i.id] = entries.length ? Math.max(...entries.map(h => {
+      if (h.ts) return h.ts;
+      const d = histParseFecha(h.fecha);
+      return d ? d.getTime() : 0;
+    })) : 0;
+  });
+
   // Sort
   filtered.sort((a,b) => {
     let av, bv;
     if(state.sortCol === 'nombre') { av = a.nombre; bv = b.nombre; }
     else if(state.sortCol === 'categoria') { av = a.categoria; bv = b.categoria; }
     else if(state.sortCol === 'precio') { av = getPrice(a,mes)||0; bv = getPrice(b,mes)||0; }
+    else if(state.sortCol === 'ultMod') { av = lastTsMap[a.id]||0; bv = lastTsMap[b.id]||0; }
     else { av = a.nombre; bv = b.nombre; }
     if(typeof av === 'string') return av.localeCompare(bv) * state.sortDir;
     return (av - bv) * state.sortDir;
@@ -2405,8 +2865,9 @@ function renderTable() {
           else ultMod = last.fecha;
         }
       }
-      return `<tr data-id="${i.id}">
-        <td>${i.nombre}${i.obs ? `<br><span style="font-size:11px;color:var(--muted)">${i.obs}</span>` : ''}</td>
+      const esFranq = pfState.productos.some(p => (p.nombre||'').toLowerCase().trim() === (i.nombre||'').toLowerCase().trim());
+      return `<tr data-id="${i.id}"${i.inactivo ? ' class="inactivo"' : ''}>
+        <td>${i.nombre}${esFranq ? ` <span title="Vinculado a Precios Franquicia" style="font-size:11px;color:var(--accent);cursor:default">🔗</span>` : ''}${i.obs ? `<br><span style="font-size:11px;color:var(--muted)">${i.obs}</span>` : ''}</td>
         <td><span class="cat-badge">${i.categoria}</span></td>
         <td style="color:var(--muted);font-size:12px">${i.unidad || '—'}</td>
         <td><span class="badge badge-${sucCls}">${i.sucursal}</span></td>
@@ -2462,6 +2923,7 @@ function openAddModal() {
   document.getElementById('newUnidadRow').style.display = 'none';
   document.getElementById('mProveedor').value = '';
   document.getElementById('mObs').value = '';
+  document.getElementById('mInactivo').checked = false;
   refreshCatSelects();
   refreshSucSelects();
   refreshMesSelects();
@@ -2487,6 +2949,7 @@ function openEditModal(id) {
   document.getElementById('newUnidadRow').style.display = 'none';
   document.getElementById('mProveedor').value = ins.proveedor || '';
   document.getElementById('mObs').value = ins.obs || '';
+  document.getElementById('mInactivo').checked = ins.inactivo || false;
   openModal('insumoModal');
 }
 
@@ -2500,6 +2963,7 @@ function saveInsumo() {
   const unidad = document.getElementById('mUnidad').value === 'otro' ? (document.getElementById('newUnidadInput').value.trim() || '') : document.getElementById('mUnidad').value;
   const proveedor = document.getElementById('mProveedor').value.trim();
   const obs = document.getElementById('mObs').value.trim();
+  const inactivo = document.getElementById('mInactivo').checked;
 
   if(!nombre || !categoria || !sucursal) { toast('Completá nombre, categoría y sucursal', 'error'); return; }
 
@@ -2507,13 +2971,30 @@ function saveInsumo() {
     const ins = state.insumos.find(i => i.id === state.editingId);
     const oldPrice = getPrice(ins, mes);
     ins.nombre = nombre; ins.categoria = categoria; ins.sucursal = sucursal;
-    ins.unidad = unidad; ins.proveedor = proveedor; ins.obs = obs;
-    if(!isNaN(precio)) setPrice(ins, mes, precio);
+    ins.unidad = unidad; ins.proveedor = proveedor; ins.obs = obs; ins.inactivo = inactivo;
+    if(!isNaN(precio)) {
+      setPrice(ins, mes, precio);
+      // Guardar el insumo editado directamente en Firestore ANTES de sync entre sucursales,
+      // para evitar que el onSnapshot de VIANDAS sobreescriba el estado con el precio viejo
+      if (_fbOk) {
+        db.collection('leno_insumos').doc(ins.id).set(ins)
+          .catch(e => console.warn('[LENO] Error guardando insumo editado:', e));
+      }
+      syncPrecioEntreSucursales(ins, mes, precio);
+      syncPrecioCompraToFranquicias(ins.nombre, precio);
+    } else if (_fbOk) {
+      db.collection('leno_insumos').doc(ins.id).set(ins)
+        .catch(e => console.warn('[LENO] Error guardando insumo editado:', e));
+    }
     toast('Insumo actualizado', 'success');
   } else {
-    const nuevo = { id: uid(), nombre, categoria, sucursal, unidad, precios: {}, proveedor, obs };
+    const nuevo = { id: uid(), nombre, categoria, sucursal, unidad, precios: {}, proveedor, obs, inactivo };
     if(!isNaN(precio)) nuevo.precios[mes] = precio;
     state.insumos.push(nuevo);
+    if (_fbOk) {
+      db.collection('leno_insumos').doc(nuevo.id).set(nuevo)
+        .catch(e => console.warn('[LENO] Error guardando nuevo insumo:', e));
+    }
     toast('Insumo agregado', 'success');
   }
 
@@ -2576,12 +3057,21 @@ function confirmPrecio() {
   addHistEntry(ins, mes, anterior, nuevo, obs);
   ins.precios[mes] = nuevo;
   if(proveedor) ins.proveedor = proveedor;
+  // Guardar el insumo directamente en Firestore ANTES del sync para evitar que
+  // el onSnapshot de otras sucursales sobreescriba el precio recién actualizado
+  if (_fbOk) {
+    db.collection('leno_insumos').doc(ins.id).set(ins)
+      .catch(e => console.warn('[LENO] Error guardando insumo (confirmPrecio):', e));
+  }
+  const synced = syncPrecioEntreSucursales(ins, mes, nuevo);
+  syncPrecioCompraToFranquicias(ins.nombre, nuevo);
   saveState();
   closeModal('precioModal');
   renderTable();
   renderDashboard();
   const trend = getTrend(anterior, nuevo);
-  toast(trend==='up' ? '▲ Precio aumentado' : trend==='down' ? '▼ Precio bajó' : 'Precio actualizado', trend==='up'?'error':trend==='down'?'success':'info');
+  const syncMsg = synced > 0 ? ` · sincronizado en ${synced} sucursal${synced > 1 ? 'es' : ''}` : '';
+  toast((trend==='up' ? '▲ Precio aumentado' : trend==='down' ? '▼ Precio bajó' : 'Precio actualizado') + syncMsg, trend==='up'?'error':trend==='down'?'success':'info');
 }
 
 // Returns the last recorded price for an insumo across all months (excluding current)
@@ -2658,6 +3148,22 @@ function makeInlineInput(td, currentValue, onCommit, onCancel) {
   input.addEventListener('blur', cancel);
 }
 
+function syncPrecioEntreSucursales(ins, mes, nuevo) {
+  const nombreLower = (ins.nombre || '').toLowerCase().trim();
+  let synced = 0;
+  state.insumos.forEach(otro => {
+    if (otro.id !== ins.id && (otro.nombre || '').toLowerCase().trim() === nombreLower) {
+      setPrice(otro, mes, nuevo, 'Sync entre sucursales');
+      if (_fbOk) {
+        db.collection('leno_insumos').doc(otro.id).set(otro)
+          .catch(e => console.warn('[Sync Suc] Error:', e));
+      }
+      synced++;
+    }
+  });
+  return synced;
+}
+
 function startPriceEdit(td, id) {
   const ins = state.insumos.find(i => i.id === id);
   if (!ins) return;
@@ -2668,12 +3174,20 @@ function startPriceEdit(td, id) {
     (nuevo) => {
       if (!isNaN(nuevo) && nuevo !== cur) {
         setPrice(ins, mes, nuevo);
+        // Guardar el insumo directamente en Firestore ANTES del sync
+        if (_fbOk) {
+          db.collection('leno_insumos').doc(ins.id).set(ins)
+            .catch(e => console.warn('[LENO] Error guardando insumo (inline):', e));
+        }
+        const synced = syncPrecioEntreSucursales(ins, mes, nuevo);
+        syncPrecioCompraToFranquicias(ins.nombre, nuevo);
         saveState();
         const trend = getTrend(cur, nuevo);
         renderTable();
         renderDashboard();
         flashCell(id, 0, trend === 'up' ? 'flash-red' : 'flash-green');
-        toast(trend === 'up' ? '▲ Precio aumentado' : trend === 'down' ? '▼ Precio bajó' : 'Sin cambio',
+        const syncMsg = synced > 0 ? ` · sincronizado en ${synced} sucursal${synced > 1 ? 'es' : ''}` : '';
+        toast((trend === 'up' ? '▲ Precio aumentado' : trend === 'down' ? '▼ Precio bajó' : 'Sin cambio') + syncMsg,
               trend === 'up' ? 'error' : trend === 'down' ? 'success' : 'info');
       } else {
         td.textContent = fmt(cur);
@@ -2725,6 +3239,7 @@ function addHistEntry(ins, mes, anterior, nuevo, obs='') {
     fecha: new Date().toLocaleDateString('es-AR'),
     obs
   });
+  updateHistBadge();
 }
 
 // ═══════════════════════════════════════════
@@ -3000,6 +3515,31 @@ function setupReportes() {
       el.appendChild(o);
     });
   }
+  // Comp selects
+  ['compMes1','compMes2'].forEach((id, idx) => {
+    const cel = document.getElementById(id);
+    if(!cel) return;
+    const cur = cel.value;
+    cel.innerHTML = '';
+    state.meses.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m; o.textContent = m;
+      cel.appendChild(o);
+    });
+    if(cur && state.meses.includes(cur)) cel.value = cur;
+    else cel.value = idx === 0 ? (state.meses[Math.max(0, state.meses.length-2)] || '') : (state.meses[state.meses.length-1] || '');
+  });
+  const csu = document.getElementById('compSuc');
+  if(csu) {
+    const cur = csu.value;
+    csu.innerHTML = '<option value="">Todas las sucursales</option>';
+    state.sucursales.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s; o.textContent = s;
+      csu.appendChild(o);
+    });
+    if(cur) csu.value = cur;
+  }
 }
 
 function buildWb(rows, cols, title) {
@@ -3013,16 +3553,19 @@ function buildWb(rows, cols, title) {
 function exportReporteVariaciones() {
   const m1 = document.getElementById('repMes1').value;
   const m2 = document.getElementById('repMes2').value;
+  if(!m1 || !m2) { toast('Selecciona ambos meses', 'error'); return; }
+  if(m1 === m2) { toast('Selecciona dos meses distintos para comparar variaciones', 'error'); return; }
   const rows = state.insumos.filter(i => {
     const p1 = getPrice(i, m1), p2 = getPrice(i, m2);
     return p1 && p2 && p1 !== p2;
   }).map(i => ({
-    Insumo: i.nombre, Categoría: i.categoria, Sucursal: i.sucursal,
+    Insumo: i.nombre, Categoria: i.categoria, Sucursal: i.sucursal,
     [`Precio ${m1}`]: getPrice(i,m1), [`Precio ${m2}`]: getPrice(i,m2),
-    'Variación %': pct(getPrice(i,m1), getPrice(i,m2))+'%',
+    'Variacion %': pct(getPrice(i,m1), getPrice(i,m2))+'%',
     Proveedor: i.proveedor || ''
   }));
-  const cols = ['Insumo','Categoría','Sucursal',`Precio ${m1}`,`Precio ${m2}`,'Variación %','Proveedor'];
+  if(!rows.length) { toast('No hay insumos con variación de precio entre esos meses', 'error'); return; }
+  const cols = ['Insumo','Categoria','Sucursal',`Precio ${m1}`,`Precio ${m2}`,'Variacion %','Proveedor'];
   const wb = buildWb(rows, cols, 'Variaciones');
   XLSX.writeFile(wb, `Variaciones_${m1}_${m2}.xlsx`);
   toast('Reporte de variaciones exportado', 'success');
@@ -3032,10 +3575,11 @@ function exportReporteCompleto() {
   const suc = document.getElementById('repSuc').value;
   const mes = state.activeMes;
   const rows = state.insumos.filter(i => !suc || i.sucursal === suc).map(i => ({
-    Insumo: i.nombre, Categoría: i.categoria, Sucursal: i.sucursal,
-    [`Precio ${mes}`]: getPrice(i, mes), Proveedor: i.proveedor || '', Observaciones: i.obs || ''
+    Insumo: i.nombre, Categoria: i.categoria, Sucursal: i.sucursal,
+    [`Precio ${mes}`]: getPrice(i, mes) || '', Proveedor: i.proveedor || '', Observaciones: i.obs || ''
   }));
-  const wb = buildWb(rows, ['Insumo','Categoría','Sucursal',`Precio ${mes}`,'Proveedor','Observaciones'], 'Insumos');
+  if(!rows.length) { toast('No hay insumos para exportar', 'error'); return; }
+  const wb = buildWb(rows, ['Insumo','Categoria','Sucursal',`Precio ${mes}`,'Proveedor','Observaciones'], 'Insumos');
   XLSX.writeFile(wb, `Insumos_${suc||'Todos'}_${mes}.xlsx`);
   toast('Reporte completo exportado', 'success');
 }
@@ -3043,12 +3587,13 @@ function exportReporteCompleto() {
 function exportHistorialInsumo() {
   const id = document.getElementById('repInsumo').value;
   const ins = state.insumos.find(i => i.id === id);
-  if(!ins) return;
+  if(!ins) { toast('Selecciona un insumo', 'error'); return; }
   const rows = state.historial.filter(h => h.insumoId === id).map(h => ({
     Fecha: h.fecha, Mes: h.mes, 'Precio Anterior': h.precioAnterior, 'Precio Nuevo': h.precioNuevo,
-    'Variación %': pct(h.precioAnterior, h.precioNuevo)+'%', Observación: h.obs || ''
+    'Variacion %': pct(h.precioAnterior, h.precioNuevo)+'%', Observacion: h.obs || ''
   }));
-  const wb = buildWb(rows, ['Fecha','Mes','Precio Anterior','Precio Nuevo','Variación %','Observación'], ins.nombre.slice(0,31));
+  if(!rows.length) { toast('No hay historial registrado para este insumo', 'error'); return; }
+  const wb = buildWb(rows, ['Fecha','Mes','Precio Anterior','Precio Nuevo','Variacion %','Observacion'], ins.nombre.slice(0,31));
   XLSX.writeFile(wb, `Historial_${ins.nombre.replace(/[^a-z0-9]/gi,'_').slice(0,30)}.xlsx`);
   toast('Historial exportado', 'success');
 }
@@ -3057,12 +3602,185 @@ function exportReporteCat() {
   const cat = document.getElementById('repCat').value;
   const mes = state.activeMes;
   const rows = state.insumos.filter(i => !cat || i.categoria === cat).map(i => ({
-    Insumo: i.nombre, Categoría: i.categoria, Sucursal: i.sucursal,
-    [`Precio ${mes}`]: getPrice(i,mes), Proveedor: i.proveedor||''
+    Insumo: i.nombre, Categoria: i.categoria, Sucursal: i.sucursal,
+    [`Precio ${mes}`]: getPrice(i,mes) || '', Proveedor: i.proveedor||''
   }));
-  const wb = buildWb(rows, ['Insumo','Categoría','Sucursal',`Precio ${mes}`,'Proveedor'], (cat||'Todos').slice(0,31));
+  if(!rows.length) { toast('No hay insumos en esta categoría', 'error'); return; }
+  const wb = buildWb(rows, ['Insumo','Categoria','Sucursal',`Precio ${mes}`,'Proveedor'], (cat||'Todos').slice(0,31));
   XLSX.writeFile(wb, `Categoria_${(cat||'Todos').replace(/[^a-z0-9]/gi,'_').slice(0,30)}.xlsx`);
-  toast('Reporte por categoría exportado', 'success');
+  toast('Reporte por categoria exportado', 'success');
+}
+
+function renderComparacion() {
+  const m1 = document.getElementById('compMes1').value;
+  const m2 = document.getElementById('compMes2').value;
+  if(!m1 || !m2) { toast('Seleccioná ambos meses', 'error'); return; }
+  if(m1 === m2) { toast('Seleccioná dos meses distintos', 'error'); return; }
+  const suc = document.getElementById('compSuc').value;
+  const insumos = state.insumos.filter(i => (!suc || i.sucursal === suc) && (getPrice(i, m1) || getPrice(i, m2)));
+  if(!insumos.length) { toast('No hay insumos para comparar', 'error'); return; }
+
+  let subieron = 0, bajaron = 0, sinCambio = 0;
+  const rows = insumos.map(i => {
+    const p1 = getPrice(i, m1), p2 = getPrice(i, m2);
+    const varPctStr = pct(p1, p2);
+    const varPctNum = varPctStr !== null ? parseFloat(varPctStr) : null;
+    const varNum = (p1 && p2) ? p2 - p1 : null;
+    if(varPctNum > 0) subieron++;
+    else if(varPctNum < 0) bajaron++;
+    else sinCambio++;
+    return { i, p1, p2, varNum, varPctNum };
+  }).sort((a, b) => Math.abs(b.varPctNum||0) - Math.abs(a.varPctNum||0));
+
+  function varClass(n) {
+    if(n === null || n === 0) return 'var-eq';
+    const a = Math.abs(n);
+    if(n > 0) return a >= 25 ? 'var-up-strong' : a >= 10 ? 'var-up-mid' : 'var-up-low';
+    return a >= 15 ? 'var-dn-strong' : 'var-dn-mid';
+  }
+  function fmtVar(v) {
+    if(v === null) return '—';
+    const abs = Math.abs(v);
+    const str = '$' + abs.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return (v > 0 ? '+' : v < 0 ? '−' : '') + str;
+  }
+
+  const tableRows = rows.map(({i, p1, p2, varNum, varPctNum}) => {
+    const cls = varClass(varPctNum);
+    const pctStr = varPctNum !== null
+      ? (varPctNum > 0 ? '▲ +' : varPctNum < 0 ? '▼ ' : '= ') + Math.abs(varPctNum).toFixed(1) + '%'
+      : '—';
+    return `<tr>
+      <td><div class="comp-name">${i.nombre}</div><div class="comp-cat">${i.categoria}${!suc ? ' · '+i.sucursal : ''}</div></td>
+      <td class="comp-price">${p1 ? fmt(p1) : '—'}</td>
+      <td class="comp-price">${p2 ? fmt(p2) : '—'}</td>
+      <td class="comp-var ${cls}">${fmtVar(varNum)}</td>
+      <td class="comp-var ${cls}">${pctStr}</td>
+    </tr>`;
+  }).join('');
+
+  const res = document.getElementById('comp-result');
+  res.innerHTML = `
+    <div class="comp-summary">
+      <div class="comp-sum-card"><div class="comp-sum-val" style="color:var(--red)">${subieron}</div><div class="comp-sum-lbl">subieron de precio</div></div>
+      <div class="comp-sum-card"><div class="comp-sum-val" style="color:var(--green)">${bajaron}</div><div class="comp-sum-lbl">bajaron de precio</div></div>
+      <div class="comp-sum-card"><div class="comp-sum-val" style="color:var(--muted)">${sinCambio}</div><div class="comp-sum-lbl">sin cambio</div></div>
+    </div>
+    <div class="comp-actions">
+      <button class="btn btn-ghost btn-sm" onclick="exportComparacionExcel()">⬇️ Excel</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportComparacionPDF()">📄 PDF</button>
+    </div>
+    <div class="comp-table-wrap">
+      <table class="comp-table">
+        <thead><tr>
+          <th>Insumo</th>
+          <th class="right">${m1}</th>
+          <th class="right">${m2}</th>
+          <th class="right">Variación $</th>
+          <th class="right">Variación %</th>
+        </tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+  res.style.display = 'block';
+  window._lastComp = { m1, m2, suc, rows, subieron, bajaron, sinCambio };
+}
+
+function exportComparacionExcel() {
+  if(!window._lastComp) { toast('Generá la comparación primero', 'error'); return; }
+  const { m1, m2, rows } = window._lastComp;
+  const exRows = rows.map(({i, p1, p2, varNum, varPctNum}) => ({
+    Insumo: i.nombre, Categoría: i.categoria, Sucursal: i.sucursal,
+    [`Precio ${m1}`]: p1 || '',
+    [`Precio ${m2}`]: p2 || '',
+    'Variación $': varNum !== null ? varNum : '',
+    'Variación %': varPctNum !== null ? varPctNum + '%' : ''
+  }));
+  const cols = ['Insumo','Categoría','Sucursal',`Precio ${m1}`,`Precio ${m2}`,'Variación $','Variación %'];
+  const wb = buildWb(exRows, cols, `${m1} vs ${m2}`.slice(0,31));
+  XLSX.writeFile(wb, `Comparacion_${m1}_vs_${m2}.xlsx`);
+  toast('Comparación exportada en Excel', 'success');
+}
+
+function exportComparacionPDF() {
+  if(!window._lastComp) { toast('Generá la comparación primero', 'error'); return; }
+  const { m1, m2, suc, rows, subieron, bajaron, sinCambio } = window._lastComp;
+  const today = new Date().toLocaleDateString('es-AR');
+
+  function fmtP(n) {
+    if(n===null||n===undefined) return '—';
+    return '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function fmtVP(v) {
+    if(v===null) return '—';
+    const abs = Math.abs(v);
+    const str = '$' + abs.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return (v > 0 ? '+' : v < 0 ? '−' : '') + str;
+  }
+
+  const trs = rows.map(({i, p1, p2, varNum, varPctNum}) => {
+    const pctStr = varPctNum !== null
+      ? (varPctNum > 0 ? '▲ +' : varPctNum < 0 ? '▼ ' : '= ') + Math.abs(varPctNum).toFixed(1) + '%'
+      : '—';
+    const color = varPctNum > 0 ? '#b91c1c' : varPctNum < 0 ? '#15803d' : '#888';
+    const bg = varPctNum > 0
+      ? (Math.abs(varPctNum) >= 25 ? '#fee2e2' : '#fef2f2')
+      : varPctNum < 0
+        ? (Math.abs(varPctNum) >= 15 ? '#dcfce7' : '#f0fdf4')
+        : '#f9fafb';
+    return `<tr>
+      <td>${i.nombre}<br><small style="color:#888">${i.categoria}${!suc?' · '+i.sucursal:''}</small></td>
+      <td style="text-align:right">${fmtP(p1)}</td>
+      <td style="text-align:right">${fmtP(p2)}</td>
+      <td style="text-align:right;background:${bg};color:${color};font-weight:700">${fmtVP(varNum)}</td>
+      <td style="text-align:right;background:${bg};color:${color};font-weight:700">${pctStr}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8"><title>Comparación ${m1} vs ${m2}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a1a;margin:0;padding:24px}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #f5a623;padding-bottom:12px;margin-bottom:18px}
+  .brand{font-size:24px;font-weight:900;color:#f5a623;letter-spacing:1px}
+  .meta{text-align:right;font-size:11px;color:#555;line-height:1.7}
+  .kpis{display:flex;gap:12px;margin-bottom:18px}
+  .kpi{flex:1;background:#f8f8f8;border-radius:6px;padding:10px 14px}
+  .kv{font-size:20px;font-weight:700}.kl{font-size:10px;color:#888;text-transform:uppercase}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th{background:#f3f3f3;font-size:9px;text-transform:uppercase;letter-spacing:.5px;padding:6px 8px;text-align:left;border-bottom:1px solid #ddd}
+  td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .ftr{margin-top:18px;padding-top:10px;border-top:1px solid #e5e5e5;font-size:9px;color:#aaa;display:flex;justify-content:space-between}
+  @media print{@page{margin:15mm}}
+</style></head><body>
+<div class="hdr">
+  <div><div class="brand">LENO</div><div style="font-size:10px;color:#888">Base de Datos Costos</div></div>
+  <div class="meta"><strong>Comparación de períodos</strong><br>${suc||'Todas las sucursales'}<br>${m1} vs ${m2}<br>Generado: ${today}</div>
+</div>
+<div class="kpis">
+  <div class="kpi"><div class="kv" style="color:#ef4444">${subieron}</div><div class="kl">Subieron de precio</div></div>
+  <div class="kpi"><div class="kv" style="color:#16a34a">${bajaron}</div><div class="kl">Bajaron de precio</div></div>
+  <div class="kpi"><div class="kv" style="color:#888">${sinCambio}</div><div class="kl">Sin cambio</div></div>
+</div>
+<table>
+  <thead><tr>
+    <th>Insumo</th>
+    <th style="text-align:right">${m1}</th>
+    <th style="text-align:right">${m2}</th>
+    <th style="text-align:right">Variación $</th>
+    <th style="text-align:right">Variación %</th>
+  </tr></thead>
+  <tbody>${trs}</tbody>
+</table>
+<div class="ftr"><span>LENO Base de Datos Costos · Confidencial</span><span>Generado automáticamente · ${today}</span></div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=820,height=650');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 500);
 }
 
 function exportHistorialExcel() {
@@ -3423,6 +4141,7 @@ async function init() {
   refreshSucSelects();
   renderDashboard();
   await pfInit();
+  await cotizLoad();
   if (_fbOk) toast('Datos cargados ✓', 'success');
 }
 
@@ -3488,6 +4207,7 @@ let pfState = {
   historial: [],
   categorias: [...PF_CATS_DEFAULT],
   editingId: null,
+  changedIds: new Set(),
   sortCol: 'nombre',
   sortDir: 1,
   page: 1,
@@ -3515,6 +4235,47 @@ function pfMarkupBadge(markup) {
 
 function pfTodayStr() {
   return new Date().toLocaleDateString('es-AR');
+}
+
+// ─── Telegram ───────────────────────────────
+async function pfSendTelegram(nombre, categoria, campo, precioAnterior, precioNuevo) {
+  console.log('[PF Telegram] ▶ Función ejecutada:', { nombre, categoria, campo, precioAnterior, precioNuevo });
+  try {
+    const TOKEN = '8022462095:AAHesIjQAJFp5vvE1Zad8AKHXXStH0MNBDE';
+    const CHAT  = '5214189495';
+    const URL_TG = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
+    console.log('[PF Telegram] URL:', URL_TG);
+    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const campoLabel = campo === 'precioCompra' ? 'Precio Compra' : 'Precio Venta';
+    const fmtN = n => n != null ? '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+    const variacion = (precioAnterior && precioAnterior !== 0)
+      ? ((precioNuevo - precioAnterior) / precioAnterior * 100)
+      : null;
+    const varStr = variacion !== null
+      ? (variacion >= 0 ? '📈 <b>Variación:</b> +' : '📉 <b>Variación:</b> ') + variacion.toFixed(0) + '%'
+      : '';
+    const now = new Date();
+    const fecha = now.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'})
+      + ' ' + now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+    const msg = `🏷️ <b>LENO · Precio Franquicia actualizado</b>\n\n📦 <b>Producto:</b> ${esc(nombre)}\n📂 <b>Categoría:</b> ${esc(categoria)}\n🔖 <b>Campo:</b> ${campoLabel}\n💰 <b>Precio anterior:</b> ${fmtN(precioAnterior)}\n💰 <b>Precio nuevo:</b> ${fmtN(precioNuevo)}\n${varStr}\n\n🕐 <i>${fecha}</i>`;
+    const body = JSON.stringify({ chat_id: CHAT, text: msg, parse_mode: 'HTML' });
+    console.log('[PF Telegram] Body:', body);
+    const res = await fetch(URL_TG, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    const data = await res.json();
+    console.log('[PF Telegram] Respuesta HTTP:', res.status, res.statusText);
+    console.log('[PF Telegram] Respuesta Telegram:', JSON.stringify(data));
+    if (!data.ok) {
+      console.error('[PF Telegram] ❌ Error de Telegram:', data.description);
+    } else {
+      console.log('[PF Telegram] ✅ Mensaje enviado correctamente');
+    }
+  } catch(e) {
+    console.error('[PF Telegram] ❌ Excepción al enviar:', e);
+  }
 }
 
 // ─── Firestore ──────────────────────────────
@@ -3710,7 +4471,8 @@ function pfRenderTable() {
     body.innerHTML = pageItems.map(p => {
       const markup = pfCalcMarkup(p.precioCompra, p.precioVenta);
       const idSafe = p.id.replace(/['"]/g,'');
-      return `<tr>
+      const isChanged = pfState.changedIds.has(p.id);
+      return `<tr${isChanged ? ' class="pf-changed-row"' : ''}>
         <td style="font-weight:500">${p.nombre || '—'}</td>
         <td><span class="cat-badge">${p.categoria || '—'}</span></td>
         <td class="price-cell pf-editable-cell" onclick="pfInlineEdit(this,'${idSafe}','precioCompra')">${pfFmt(p.precioCompra)}</td>
@@ -3718,6 +4480,7 @@ function pfRenderTable() {
         <td>${pfMarkupBadge(markup)}</td>
         <td style="color:var(--muted);font-size:12px">${p.fechaActualizacion || '—'}</td>
         <td><div class="row-actions">
+          ${isChanged ? `<button class="btn-visto" onclick="pfMarkVisto('${idSafe}')">✓ Visto</button>` : ''}
           <button class="action-btn" onclick="pfEditProducto('${idSafe}')">✏️</button>
           <button class="action-btn del" onclick="pfDeleteProducto('${idSafe}')">🗑️</button>
         </div></td>
@@ -3756,6 +4519,11 @@ function pfSort(col) {
   pfRenderTable();
 }
 
+function pfMarkVisto(id) {
+  pfState.changedIds.delete(id);
+  pfRenderTable();
+}
+
 // ─── Edición inline ──────────────────────────
 function pfInlineEdit(cell, id, field) {
   if (cell.querySelector('input')) return;
@@ -3791,6 +4559,8 @@ function pfInlineEdit(cell, id, field) {
 
     prod[field] = newVal;
     prod.fechaActualizacion = pfTodayStr();
+    if (field === 'precioVenta') pfState.changedIds.add(id);
+    if (field === 'precioCompra') pfSyncPrecioCompraToInsumos(prod.nombre, newVal);
     pfSaveProducto_DB(prod);
 
     const row = cell.parentElement;
@@ -3804,6 +4574,7 @@ function pfInlineEdit(cell, id, field) {
     pfRenderKPIs();
     pfRenderHistPanel();
     toast('Precio actualizado ✓', 'success');
+    pfSendTelegram(prod.nombre, prod.categoria, field, oldVal, newVal);
   };
 
   input.addEventListener('blur', commit);
@@ -3856,10 +4627,14 @@ async function pfSaveProducto() {
       if (precioCompra !== null && precioCompra !== prod.precioCompra) {
         const h = { id: uid(), ts: Date.now(), productoId: prod.id, nombre: prod.nombre, categoria, campo: 'precioCompra', precioAnterior: prod.precioCompra, precioNuevo: precioCompra, fecha: pfTodayStr() };
         pfState.historial.push(h); pfSaveHist_DB(h);
+        pfSendTelegram(prod.nombre, categoria, 'precioCompra', prod.precioCompra, precioCompra);
+        pfSyncPrecioCompraToInsumos(nombre, precioCompra);
       }
       if (precioVenta !== null && precioVenta !== prod.precioVenta) {
         const h = { id: uid(), ts: Date.now(), productoId: prod.id, nombre: prod.nombre, categoria, campo: 'precioVenta', precioAnterior: prod.precioVenta, precioNuevo: precioVenta, fecha: pfTodayStr() };
         pfState.historial.push(h); pfSaveHist_DB(h);
+        pfSendTelegram(prod.nombre, categoria, 'precioVenta', prod.precioVenta, precioVenta);
+        pfState.changedIds.add(prod.id);
       }
       Object.assign(prod, { nombre, categoria, precioCompra, precioVenta, notas, fechaActualizacion: pfTodayStr() });
       await pfSaveProducto_DB(prod);
@@ -3884,6 +4659,47 @@ async function pfDeleteProducto(id) {
   await pfDeleteProducto_DB(id);
   pfRenderAll();
   toast('Producto eliminado', 'info');
+}
+
+// ─── Sincronización precio insumo → precioCompra en Precios Franquicias ──
+function syncPrecioCompraToFranquicias(nombre, nuevoPrecio) {
+  if (!pfState || !pfState.productos) return;
+  const nombreLower = (nombre || '').toLowerCase().trim();
+  let synced = 0;
+  pfState.productos.forEach(prod => {
+    if ((prod.nombre || '').toLowerCase().trim() === nombreLower) {
+      prod.precioCompra = nuevoPrecio;
+      prod.fechaActualizacion = pfTodayStr();
+      pfSaveProducto_DB(prod);
+      synced++;
+    }
+  });
+  if (synced > 0) {
+    pfRenderAll();
+    toast(`P. Compra actualizado en ${synced} producto${synced > 1 ? 's' : ''} de Franquicias ✓`, 'info');
+  }
+}
+
+// ─── Sincronización precioCompra → leno_insumos ──
+function pfSyncPrecioCompraToInsumos(nombre, nuevoPrecio) {
+  const nombreLower = (nombre || '').toLowerCase().trim();
+  let synced = 0;
+  state.insumos.forEach(ins => {
+    if ((ins.nombre || '').toLowerCase().trim() === nombreLower) {
+      setPrice(ins, state.activeMes, nuevoPrecio, 'Sync desde Precios Franquicia');
+      if (_fbOk) {
+        db.collection('leno_insumos').doc(ins.id).set(ins)
+          .catch(e => console.warn('[PF Sync] Error guardando insumo:', e));
+      }
+      synced++;
+    }
+  });
+  if (synced > 0) {
+    saveState();
+    renderTable();
+    renderDashboard();
+    toast(`Precio de compra sincronizado en ${synced} insumo${synced > 1 ? 's' : ''} ✓`, 'info');
+  }
 }
 
 // ─── Gestión de categorías en modal ──────────
@@ -3973,6 +4789,489 @@ function pfExportExcel() {
 // ─── Init del módulo ──────────────────────────
 async function pfInit() {
   await pfLoad();
+}
+
+// ═══════════════════════════════════════════
+//   MÓDULO COTIZACIONES
+// ═══════════════════════════════════════════
+
+let cotizState = {
+  cotizaciones: [],
+  editingId: null,
+  itemsTemp: [],  // [{ id, nombre, unidad, cantidad, lineas:[] }]
+};
+
+// ─── Normalizar formato antiguo → nuevo ──────
+function cotizNormalize(c) {
+  if (c.items && c.items.length) return c;
+  // Formato viejo: insumo/unidad/cantidad/lineas en el root
+  return {
+    ...c,
+    nombre: c.nombre || c.insumo || 'Sin nombre',
+    items: [{
+      id: (c.id || uid()) + '_i0',
+      nombre: c.insumo || '',
+      unidad: c.unidad || '',
+      cantidad: c.cantidad || 0,
+      lineas: (c.lineas || []).map(l => ({ ...l })),
+    }],
+  };
+}
+
+// ─── Firestore ──────────────────────────────
+async function cotizLoad() {
+  if (!_fbOk) return;
+  try {
+    const snap = await db.collection('leno_cotizaciones').get();
+    cotizState.cotizaciones = snap.docs.map(d => cotizNormalize(d.data()))
+      .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  } catch(e) {
+    console.warn('[COTIZ] Error cargando:', e);
+  }
+}
+
+async function cotizSave_DB(c) {
+  if (!_fbOk) throw new Error('Firebase no disponible');
+  await db.collection('leno_cotizaciones').doc(c.id).set(c);
+}
+
+async function cotizDelete_DB(id) {
+  if (!_fbOk) return;
+  try { await db.collection('leno_cotizaciones').doc(id).delete(); }
+  catch(e) { console.warn('[COTIZ] Error eliminando:', e); }
+}
+
+// ─── Render lista ────────────────────────────
+function cotizRenderList() {
+  const search = (document.getElementById('cotizSearch')?.value || '').toLowerCase();
+  const container = document.getElementById('cotizList');
+  if (!container) return;
+
+  let items = [...cotizState.cotizaciones].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  if (search) items = items.filter(c =>
+    (c.nombre || '').toLowerCase().includes(search) ||
+    (c.items || []).some(it => (it.nombre || '').toLowerCase().includes(search)));
+
+  if (!items.length) {
+    container.innerHTML = `<div class="cotiz-empty">No hay cotizaciones guardadas.<br><span style="font-size:12px;margin-top:6px;display:block">Hacé clic en <strong>"+ Nueva cotización"</strong> para empezar a comparar precios.</span></div>`;
+    return;
+  }
+
+  container.innerHTML = items.map(c => {
+    const allItems = c.items || [];
+    const allLineas = allItems.flatMap(it => it.lineas || []);
+    const proveedores = [...new Set(allLineas.map(l => l.proveedor).filter(Boolean))];
+
+    // Total por proveedor (suma precio × cantidad de cada insumo)
+    const totals = {};
+    proveedores.forEach(p => {
+      totals[p] = allItems.reduce((sum, it) => {
+        const l = (it.lineas || []).find(x => x.proveedor === p && x.precio > 0);
+        return sum + (l ? l.precio * (it.cantidad || 1) : 0);
+      }, 0);
+    });
+    const validP = proveedores.filter(p => totals[p] > 0);
+    const winner = validP.length ? validP.reduce((a, b) => totals[a] <= totals[b] ? a : b) : null;
+
+    const winnerHtml = winner
+      ? `<span class="cotiz-card-winner">🏆 ${winner} — Total: ${fmt(totals[winner])}</span>`
+      : '';
+    const metaItems = [
+      c.fecha || null,
+      `${allItems.length} insumo${allItems.length !== 1 ? 's' : ''}`,
+      proveedores.length ? `${proveedores.length} proveedor${proveedores.length !== 1 ? 'es' : ''}` : null,
+      c.obs || null,
+    ].filter(Boolean);
+
+    return `
+      <div class="cotiz-card">
+        <div class="cotiz-card-main" onclick="cotizOpenDetail('${c.id}')">
+          <div class="cotiz-card-title">${c.nombre || '—'}</div>
+          <div class="cotiz-card-meta">${metaItems.map(m => `<span>${m}</span>`).join('')}</div>
+          ${winnerHtml ? `<div style="margin-top:8px">${winnerHtml}</div>` : ''}
+        </div>
+        <div class="cotiz-card-actions">
+          <button class="btn btn-ghost btn-sm" onclick="cotizOpenEdit('${c.id}')">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="cotizDelete('${c.id}')">🗑️</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Detalle ─────────────────────────────────
+function cotizOpenDetail(id) {
+  const c = cotizState.cotizaciones.find(x => x.id === id);
+  if (!c) return;
+
+  document.getElementById('cotizDetailTitle').textContent = (c.nombre || 'COTIZACIÓN').toUpperCase();
+  document.getElementById('cotizDetailEditBtn').setAttribute('onclick', `closeModal('cotizDetailModal'); cotizOpenEdit('${id}')`);
+
+  const allItems = c.items || [];
+  const allLineas = allItems.flatMap(it => it.lineas || []);
+  const allProveedores = [...new Set(allLineas.map(l => l.proveedor).filter(Boolean))];
+
+  // KPIs generales
+  const kpis = `
+    <div class="cotiz-detail-header">
+      <div class="cotiz-detail-kpi">
+        <div class="dk-label">Cotización</div>
+        <div class="dk-value">${c.nombre || '—'}</div>
+      </div>
+      <div class="cotiz-detail-kpi">
+        <div class="dk-label">Insumos · Proveedores</div>
+        <div class="dk-value">${allItems.length} insumo${allItems.length !== 1 ? 's' : ''} · ${allProveedores.length} proveedor${allProveedores.length !== 1 ? 'es' : ''}</div>
+      </div>
+      <div class="cotiz-detail-kpi">
+        <div class="dk-label">Fecha</div>
+        <div class="dk-value">${c.fecha || '—'}</div>
+      </div>
+    </div>
+    ${c.obs ? `<div style="margin-bottom:16px;font-size:12px;color:var(--muted);background:var(--surface2);border-radius:6px;padding:8px 12px">📝 ${c.obs}</div>` : ''}`;
+
+  // Resumen total por proveedor
+  let summaryHtml = '';
+  if (allProveedores.length >= 2) {
+    const totals = {};
+    allProveedores.forEach(p => {
+      totals[p] = allItems.reduce((sum, it) => {
+        const l = (it.lineas || []).find(x => x.proveedor === p && x.precio > 0);
+        return sum + (l ? l.precio * (it.cantidad || 1) : 0);
+      }, 0);
+    });
+    const validP = allProveedores.filter(p => totals[p] > 0).sort((a, b) => totals[a] - totals[b]);
+    if (validP.length >= 2) {
+      const minTotal = totals[validP[0]];
+      const summaryRows = validP.map((p, i) => {
+        const isWinner = i === 0;
+        const diff = isWinner ? 0 : ((totals[p] - minTotal) / minTotal * 100);
+        return `<tr class="${isWinner ? 'winner-row' : ''}">
+          <td style="font-weight:${isWinner ? '600' : '400'}">${p}</td>
+          <td style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${isWinner ? 'var(--green)' : 'var(--text)'}">${fmt(totals[p])}</td>
+          <td>${isWinner ? '<span class="cotiz-winner-badge">🏆 más barato</span>' : `<span class="cotiz-pct-up">+${diff.toFixed(1)}%</span>`}</td>
+          <td style="color:var(--red);font-size:12px">${isWinner ? '' : '+' + fmt(totals[p] - minTotal)}</td>
+        </tr>`;
+      }).join('');
+      summaryHtml = `
+        <div class="cotiz-summary-section">
+          <div class="cotiz-cmp-title">Resumen total por proveedor</div>
+          <table class="cotiz-cmp-table">
+            <thead><tr><th>Proveedor</th><th>Total general</th><th>Vs. más barato</th><th>Diferencia</th></tr></thead>
+            <tbody>${summaryRows}</tbody>
+          </table>
+          <div class="cotiz-ahorro-bar" style="margin-top:12px">
+            🏆 <strong>${validP[0]}</strong> es el más económico · Ahorrás <strong>${fmt(totals[validP[validP.length-1]] - minTotal)}</strong> vs. la opción más cara
+          </div>
+        </div>`;
+    }
+  }
+
+  // Detalle por insumo
+  const itemsHtml = allItems.map(it => {
+    const lineas = it.lineas || [];
+    const valid = lineas.filter(l => l.precio > 0);
+    const minPrecio = valid.length ? Math.min(...valid.map(l => l.precio)) : 0;
+    const maxPrecio = valid.length ? Math.max(...valid.map(l => l.precio)) : 0;
+    const cantidad = it.cantidad || 0;
+    const unidad = it.unidad || 'und.';
+
+    const rows = lineas.map(l => {
+      const isWinner = l.precio > 0 && l.precio === minPrecio;
+      const diff = (!l.precio || l.precio === minPrecio) ? null : ((l.precio - minPrecio) / minPrecio * 100);
+      const diffHtml = l.precio <= 0
+        ? `<span style="color:var(--muted)">—</span>`
+        : isWinner
+          ? `<span class="cotiz-winner-badge">🏆 más barato</span>`
+          : `<span class="cotiz-pct-up">+${diff.toFixed(1)}%</span>`;
+      const totalCell = cantidad > 0 && l.precio > 0
+        ? `<td style="font-weight:600;color:${isWinner ? 'var(--green)' : 'var(--text)'}">${fmt(l.precio * cantidad)}</td>`
+        : cantidad > 0 ? `<td style="color:var(--muted)">—</td>` : '';
+      const ahorroCell = cantidad > 0 && l.precio > 0 && !isWinner
+        ? `<td style="color:var(--red);font-size:12px">+${fmt((l.precio - minPrecio) * cantidad)}</td>`
+        : cantidad > 0 ? `<td></td>` : '';
+      return `<tr class="${isWinner ? 'winner-row' : ''}">
+        <td style="font-weight:${isWinner ? '600' : '400'}">${l.proveedor || '—'}</td>
+        <td style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.5px;color:${isWinner ? 'var(--green)' : 'var(--text)'}">${l.precio > 0 ? fmt(l.precio) : '—'}</td>
+        <td>${diffHtml}</td>
+        ${totalCell}
+        ${ahorroCell}
+        <td style="color:var(--muted);font-size:11px">${l.obs || '—'}</td>
+      </tr>`;
+    }).join('');
+
+    const totalTh  = cantidad > 0 ? `<th>Total ×${cantidad} ${unidad}</th>` : '';
+    const ahorroTh = cantidad > 0 ? `<th>Sobrecosto</th>` : '';
+    const meta = [cantidad ? `${cantidad} ${unidad}` : unidad].filter(Boolean).join(' · ');
+
+    return `<div class="cotiz-detail-item">
+      <div class="cotiz-detail-item-title">${it.nombre || '—'} ${meta ? `<span style="font-size:11px;color:var(--muted);font-weight:400">(${meta})</span>` : ''}</div>
+      ${valid.length ? `
+        <table class="cotiz-cmp-table">
+          <thead><tr><th>Proveedor</th><th>Precio / ${unidad}</th><th>Vs. más barato</th>${totalTh}${ahorroTh}<th>Obs.</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${valid.length >= 2 ? `<div class="cotiz-ahorro-bar" style="margin-top:10px">
+          Diferencia máxima: <strong>${fmt(maxPrecio - minPrecio)} / ${unidad}</strong>
+          ${cantidad > 0 ? ` · Ahorrás <strong>${fmt((maxPrecio - minPrecio) * cantidad)}</strong> eligiendo al más barato` : ''}
+        </div>` : ''}
+      ` : `<div style="color:var(--muted);font-size:12px;padding:8px 0">Sin precios cargados.</div>`}
+    </div>`;
+  }).join('');
+
+  document.getElementById('cotizDetailBody').innerHTML =
+    kpis + summaryHtml + `<div style="margin-top:${summaryHtml ? '20px' : '0'}">${itemsHtml}</div>`;
+  openModal('cotizDetailModal');
+}
+
+// ─── Modal ───────────────────────────────────
+function cotizOpenNew() {
+  cotizState.editingId = null;
+  cotizState.itemsTemp = [];
+  document.getElementById('cotizModalTitle').textContent = 'NUEVA COTIZACIÓN';
+  document.getElementById('cotizNombre').value = '';
+  document.getElementById('cotizFecha').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('cotizObs').value = '';
+  cotizRenderItems();
+  cotizUpdateComparacion();
+  openModal('cotizModal');
+}
+
+function cotizOpenEdit(id) {
+  const c = cotizState.cotizaciones.find(x => x.id === id);
+  if (!c) return;
+  cotizState.editingId = id;
+  cotizState.itemsTemp = (c.items || []).map(it => ({
+    ...it,
+    lineas: (it.lineas || []).map(l => ({ ...l })),
+  }));
+  document.getElementById('cotizModalTitle').textContent = 'EDITAR COTIZACIÓN';
+  document.getElementById('cotizNombre').value = c.nombre || '';
+  document.getElementById('cotizFecha').value = c.fecha || '';
+  document.getElementById('cotizObs').value = c.obs || '';
+  cotizRenderItems();
+  cotizUpdateComparacion();
+  openModal('cotizModal');
+}
+
+function cotizAddItem() {
+  cotizState.itemsTemp.push({
+    id: uid(),
+    nombre: '',
+    unidad: '',
+    cantidad: 0,
+    lineas: [{ id: uid(), proveedor: '', precio: 0, obs: '' }],
+  });
+  cotizRenderItems();
+  cotizUpdateComparacion();
+}
+
+function cotizRemoveItem(idx) {
+  cotizState.itemsTemp.splice(idx, 1);
+  cotizRenderItems();
+  cotizUpdateComparacion();
+}
+
+function cotizAddLineaToItem(itemIdx) {
+  cotizState.itemsTemp[itemIdx].lineas.push({ id: uid(), proveedor: '', precio: 0, obs: '' });
+  cotizRenderItems();
+}
+
+function cotizRemoveLineaFromItem(itemIdx, lineaIdx) {
+  cotizState.itemsTemp[itemIdx].lineas.splice(lineaIdx, 1);
+  cotizRenderItems();
+  cotizUpdateComparacion();
+}
+
+function cotizRenderItems() {
+  const container = document.getElementById('cotizItemsContainer');
+  if (!container) return;
+
+  // Datalist de proveedores
+  let pdl = document.getElementById('cotizProvList');
+  if (!pdl) { pdl = document.createElement('datalist'); pdl.id = 'cotizProvList'; document.body.appendChild(pdl); }
+  pdl.innerHTML = state.proveedores.map(p => `<option value="${p.nombre}">`).join('');
+
+  // Datalist de insumos
+  let idl = document.getElementById('cotizInsumoList');
+  if (!idl) { idl = document.createElement('datalist'); idl.id = 'cotizInsumoList'; document.body.appendChild(idl); }
+  idl.innerHTML = [...new Set(state.insumos.map(i => i.nombre))].sort().map(n => `<option value="${n}">`).join('');
+
+  if (!cotizState.itemsTemp.length) {
+    container.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:8px">Sin insumos. Usá el botón "+ Agregar insumo".</div>`;
+    return;
+  }
+
+  container.innerHTML = cotizState.itemsTemp.map((item, idx) => {
+    const lineasHtml = item.lineas.map((l, li) => `
+      <tr>
+        <td><input class="form-input" style="font-size:12px;padding:5px 8px"
+          value="${(l.proveedor || '').replace(/"/g,'&quot;')}" placeholder="Proveedor"
+          list="cotizProvList"
+          oninput="cotizState.itemsTemp[${idx}].lineas[${li}].proveedor=this.value; cotizUpdateComparacion()"></td>
+        <td><input class="form-input" style="font-size:12px;padding:5px 8px"
+          type="number" value="${l.precio || ''}" placeholder="0.00" min="0" step="0.01"
+          oninput="cotizState.itemsTemp[${idx}].lineas[${li}].precio=parseFloat(this.value)||0; cotizUpdateComparacion()"></td>
+        <td><input class="form-input" style="font-size:12px;padding:5px 8px"
+          value="${(l.obs || '').replace(/"/g,'&quot;')}" placeholder="Obs..."
+          oninput="cotizState.itemsTemp[${idx}].lineas[${li}].obs=this.value"></td>
+        <td style="text-align:center">
+          <button class="btn btn-danger btn-sm" onclick="cotizRemoveLineaFromItem(${idx},${li})" style="padding:4px 8px">✕</button>
+        </td>
+      </tr>`).join('');
+
+    return `
+      <div class="cotiz-item-block">
+        <div class="cotiz-item-header">
+          <input class="form-input" style="font-size:13px;padding:6px 10px;flex:2;min-width:140px"
+            value="${(item.nombre || '').replace(/"/g,'&quot;')}"
+            placeholder="Nombre del insumo (ej: Carne, Pan)"
+            list="cotizInsumoList"
+            oninput="cotizState.itemsTemp[${idx}].nombre=this.value; cotizUpdateComparacion()">
+          <input class="form-input" style="font-size:12px;padding:6px 8px;width:80px"
+            value="${(item.unidad || '').replace(/"/g,'&quot;')}" placeholder="Unidad"
+            oninput="cotizState.itemsTemp[${idx}].unidad=this.value; cotizUpdateComparacion()">
+          <input class="form-input" style="font-size:12px;padding:6px 8px;width:90px"
+            type="number" value="${item.cantidad || ''}" placeholder="Cantidad" min="0"
+            oninput="cotizState.itemsTemp[${idx}].cantidad=parseFloat(this.value)||0; cotizUpdateComparacion()">
+          <button class="btn btn-danger btn-sm" onclick="cotizRemoveItem(${idx})" style="padding:5px 9px;flex-shrink:0">✕ Quitar</button>
+        </div>
+        <div class="cotiz-item-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">Proveedores</span>
+            <button class="btn btn-ghost btn-sm" onclick="cotizAddLineaToItem(${idx})" style="font-size:11px">+ Proveedor</button>
+          </div>
+          <table class="cotiz-lineas-table">
+            <thead><tr>
+              <th style="width:35%">Proveedor</th>
+              <th style="width:22%">Precio</th>
+              <th style="width:33%">Observaciones</th>
+              <th style="width:10%"></th>
+            </tr></thead>
+            <tbody>${lineasHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function cotizUpdateComparacion() {
+  const el = document.getElementById('cotizLiveComparacion');
+  if (!el) return;
+
+  const items = cotizState.itemsTemp;
+  if (!items.length) { el.style.display = 'none'; return; }
+
+  // Recolectar todos los proveedores con precio
+  const allLineas = items.flatMap(it => it.lineas || []);
+  const proveedores = [...new Set(allLineas.map(l => l.proveedor).filter(Boolean))];
+  if (proveedores.length < 2) { el.style.display = 'none'; return; }
+
+  // Total por proveedor
+  const totals = {};
+  proveedores.forEach(p => {
+    totals[p] = items.reduce((sum, it) => {
+      const l = (it.lineas || []).find(x => x.proveedor === p && x.precio > 0);
+      return sum + (l ? l.precio * (it.cantidad || 1) : 0);
+    }, 0);
+  });
+
+  const validP = proveedores.filter(p => totals[p] > 0).sort((a, b) => totals[a] - totals[b]);
+  if (validP.length < 2) { el.style.display = 'none'; return; }
+
+  const minTotal = totals[validP[0]];
+
+  const rows = validP.map((p, i) => {
+    const isWinner = i === 0;
+    const diff = isWinner ? 0 : ((totals[p] - minTotal) / minTotal * 100);
+    return `<tr class="${isWinner ? 'winner-row' : ''}">
+      <td style="font-weight:${isWinner ? '600' : '400'}">${p}</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.5px;color:${isWinner ? 'var(--green)' : 'var(--text)'}">${fmt(totals[p])}</td>
+      <td>${isWinner ? '<span class="cotiz-winner-badge">🏆 más barato</span>' : `<span class="cotiz-pct-up">+${diff.toFixed(1)}%</span>`}</td>
+    </tr>`;
+  }).join('');
+
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="cotiz-cmp-title">Comparación en vivo — Total por proveedor</div>
+    <table class="cotiz-cmp-table">
+      <thead><tr><th>Proveedor</th><th>Total general</th><th>Vs. más barato</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="cotiz-ahorro-bar">Ahorrás <strong>${fmt(totals[validP[validP.length-1]] - minTotal)}</strong> eligiendo a <strong>${validP[0]}</strong> vs. la opción más cara</div>`;
+}
+
+async function sendTelegramObs(cotiz) {
+  const TOKEN = '8022462095:AAHesIjQAJFp5vvE1Zad8AKHXXStH0MNBDE';
+  const CHAT_ID = '5214189495';
+  const texto = `📋 *Nueva observación en Cotización*\n\n📌 *Nombre:* ${cotiz.nombre}\n📅 *Fecha:* ${cotiz.fecha}\n💬 *Observación:* ${cotiz.obs}`;
+  try {
+    await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, text: texto, parse_mode: 'Markdown' })
+    });
+  } catch(e) {
+    console.warn('[TELEGRAM] Error enviando notificación:', e);
+  }
+}
+
+async function cotizSave() {
+  const nombre = document.getElementById('cotizNombre').value.trim();
+  if (!nombre) { toast('Escribí el nombre de la cotización', 'error'); return; }
+  if (!cotizState.itemsTemp.length) { toast('Agregá al menos un insumo', 'error'); return; }
+
+  const items = cotizState.itemsTemp
+    .map(it => ({ ...it, lineas: (it.lineas || []).filter(l => l.proveedor || l.precio > 0) }))
+    .filter(it => it.nombre || it.lineas.length);
+
+  if (!items.length) { toast('Completá al menos un insumo con nombre', 'error'); return; }
+
+  const id = cotizState.editingId || uid();
+  const obsAnterior = cotizState.editingId
+    ? (cotizState.cotizaciones.find(x => x.id === cotizState.editingId)?.obs || '')
+    : '';
+  const c = {
+    id,
+    nombre,
+    fecha: document.getElementById('cotizFecha').value || new Date().toLocaleDateString('es-AR'),
+    obs:   document.getElementById('cotizObs').value.trim(),
+    items,
+    ts:    Date.now(),
+  };
+
+  if (cotizState.editingId) {
+    const idx = cotizState.cotizaciones.findIndex(x => x.id === cotizState.editingId);
+    if (idx >= 0) cotizState.cotizaciones[idx] = c;
+    else cotizState.cotizaciones.unshift(c);
+  } else {
+    cotizState.cotizaciones.unshift(c);
+  }
+
+  try {
+    await cotizSave_DB(c);
+  } catch(e) {
+    console.error('[COTIZ] Error guardando en Firestore:', e);
+    toast('Error al guardar en Firestore. Revisá la conexión.', 'error');
+    return;
+  }
+
+  if (c.obs && c.obs !== obsAnterior) {
+    sendTelegramObs(c);
+  }
+
+  cotizState.editingId = null;
+  closeModal('cotizModal');
+  cotizRenderList();
+  toast('Cotización guardada ✓', 'success');
+}
+
+async function cotizDelete(id) {
+  const c = cotizState.cotizaciones.find(x => x.id === id);
+  if (!c) return;
+  if (!confirm(`¿Eliminar la cotización "${c.nombre || c.id}"?`)) return;
+  cotizState.cotizaciones = cotizState.cotizaciones.filter(x => x.id !== id);
+  await cotizDelete_DB(id);
+  cotizRenderList();
+  toast('Cotización eliminada', 'info');
 }
 </script>
 

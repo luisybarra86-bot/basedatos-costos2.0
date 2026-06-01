@@ -1098,6 +1098,7 @@
     position: fixed;
     inset: 0;
     background: var(--bg);
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.07) 0%, transparent 65%);
     z-index: 9999;
     display: flex;
     align-items: center;
@@ -1108,48 +1109,89 @@
   .pin-box {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 40px 36px 36px;
+    border-radius: 24px;
+    padding: 44px 40px 40px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 28px;
-    width: 320px;
+    width: 340px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.06);
+  }
+  .pin-logo-wrap {
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+  .pin-logo-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #d4af37, #f5d76e, #b8963a);
+    z-index: 0;
+  }
+  .pin-logo-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--surface);
+    z-index: 1;
+    margin: 2px;
   }
   .pin-logo {
-    width: 72px;
-    height: 72px;
-    object-fit: contain;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    position: relative;
+    z-index: 2;
   }
   .pin-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 22px;
-    letter-spacing: 3px;
-    color: var(--accent);
+    font-size: 26px;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #d4af37, #f5d76e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     text-align: center;
-    line-height: 1.2;
+    line-height: 1;
+    margin-bottom: -16px;
+  }
+  .pin-subtitle {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    font-weight: 600;
+    text-align: center;
   }
   .pin-dots {
     display: flex;
-    gap: 14px;
+    gap: 16px;
   }
   .pin-dot {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    border: 2px solid var(--border);
+    border: 2px solid rgba(255,255,255,0.12);
     background: transparent;
-    transition: all 0.15s;
+    transition: all 0.2s ease;
   }
   .pin-dot.filled {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: linear-gradient(135deg, #d4af37, #f5d76e);
+    border-color: transparent;
+    box-shadow: 0 0 10px rgba(212,175,55,0.5);
+    transform: scale(1.15);
   }
   .pin-error {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--red);
-    min-height: 18px;
+    min-height: 16px;
     text-align: center;
+    font-weight: 500;
   }
   .pin-keypad {
     display: grid;
@@ -1158,22 +1200,22 @@
     width: 100%;
   }
   .pin-key {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px;
     color: var(--text);
     font-family: 'Sora', sans-serif;
     font-size: 18px;
     font-weight: 500;
-    padding: 14px 0;
+    padding: 16px 0;
     cursor: pointer;
-    transition: all 0.12s;
+    transition: all 0.15s ease;
     text-align: center;
     user-select: none;
   }
-  .pin-key:hover { background: var(--border); }
-  .pin-key:active { transform: scale(0.93); background: rgba(245,166,35,0.15); }
-  .pin-key.del { font-size: 20px; color: var(--muted); }
+  .pin-key:hover { background: rgba(212,175,55,0.08); border-color: rgba(212,175,55,0.2); color: var(--accent); }
+  .pin-key:active { transform: scale(0.92); background: rgba(212,175,55,0.18); border-color: rgba(212,175,55,0.4); }
+  .pin-key.del { font-size: 18px; color: var(--muted); }
   .pin-key.zero { grid-column: 2; }
   tr.inactivo td { opacity: 0.42; }
   tr.inactivo { background: rgba(107,114,128,0.08); }
@@ -1248,8 +1290,11 @@
 <!-- PIN SCREEN -->
 <div id="pinScreen">
   <div class="pin-box">
-    <img src="logo.png" alt="Logo" class="pin-logo" onerror="this.style.display='none'">
-    <div class="pin-title">LENO · Base de Datos Costos</div>
+    <div class="pin-logo-wrap">
+      <img src="logo.png" alt="Logo" class="pin-logo" onerror="this.style.display='none'">
+    </div>
+    <div class="pin-title">LENO</div>
+    <div class="pin-subtitle">Ingresá tu PIN</div>
     <div class="pin-dots">
       <div class="pin-dot" id="d0"></div>
       <div class="pin-dot" id="d1"></div>

@@ -492,7 +492,7 @@
     border: 1px solid var(--border);
   }
 
-  .price-cell { font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .price-cell { font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
   .price-editable { cursor: text; }
   .price-editable:hover { color: var(--accent); }
   @keyframes flashGreen { 0%,100%{ background:transparent } 40%{ background:rgba(34,197,94,0.22) } }
@@ -533,8 +533,10 @@
     text-overflow: ellipsis;
   }
   .var-prices {
-    font-size: 11px;
-    color: var(--muted);
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
     margin-left: 8px;
     flex-shrink: 0;
     white-space: nowrap;
@@ -2921,16 +2923,15 @@ function renderDashboard() {
       } catch(e) {}
       return '—';
     };
-    latestTbody.innerHTML = latest8.map((ins, idx) => {
+    latestTbody.innerHTML = latest8.map(ins => {
       const cur = getPrice(ins, mes);
-      const isLast = idx === latest8.length - 1;
-      return `<tr style="border-bottom:${isLast ? 'none' : '1px solid var(--border)'}">
-        <td style="padding:10px 12px;font-weight:500">${ins.nombre}</td>
-        <td style="padding:10px 12px"><span class="cat-badge">${ins.categoria}</span></td>
-        <td style="padding:10px 12px"><span class="badge badge-${_sucCls(ins.sucursal)}">${ins.sucursal}</span></td>
-        <td style="padding:10px 12px;text-align:right;font-family:monospace">${fmt(cur)}</td>
-        <td style="padding:10px 12px;color:var(--muted)">${ins.unidad || '—'}</td>
-        <td style="padding:10px 12px;color:var(--muted);font-size:12px">${_insCreatedAt(ins)}</td>
+      return `<tr>
+        <td>${ins.nombre}</td>
+        <td><span class="cat-badge">${ins.categoria}</span></td>
+        <td><span class="badge badge-${_sucCls(ins.sucursal)}">${ins.sucursal}</span></td>
+        <td class="price-cell" style="text-align:right">${fmt(cur)}</td>
+        <td style="color:var(--muted)">${ins.unidad || '—'}</td>
+        <td style="color:var(--muted)">${_insCreatedAt(ins)}</td>
       </tr>`;
     }).join('');
   }

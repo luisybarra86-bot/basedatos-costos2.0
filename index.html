@@ -40,7 +40,8 @@
     background: var(--bg);
     color: var(--text);
     font-family: 'Sora', sans-serif;
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.5;
     min-height: 100vh;
     overflow-x: hidden;
   }
@@ -451,7 +452,7 @@
 
   tbody td {
     padding: 11px 14px;
-    font-size: 13.5px;
+    font-size: 13px;
     color: var(--text);
   }
 
@@ -617,7 +618,7 @@
   .hist-dot.same { background: var(--muted); }
 
   .hist-body { flex: 1; }
-  .hist-insumo { font-weight: 600; font-size: 13.5px; }
+  .hist-insumo { font-weight: 600; font-size: 13px; }
   .hist-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .hist-change { font-weight: 600; font-size: 13px; }
   .hist-change.up { color: var(--red); }
@@ -636,7 +637,7 @@
 
   .prov-card:hover { border-color: var(--muted); }
 
-  .prov-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .prov-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
   .prov-count { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
   .prov-items { display: flex; flex-direction: column; gap: 4px; }
   .prov-item-line { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
@@ -1066,7 +1067,7 @@
   .pf-editable-cell:hover { color: var(--accent); }
   .pf-changed-row { background: rgba(245,166,35,0.07) !important; }
   .pf-changed-row > td:first-child { border-left: 3px solid var(--accent); padding-left: 9px; }
-  .btn-visto { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); padding: 3px 8px; font-size: 11px; border-radius: 5px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.15s; white-space: nowrap; }
+  .btn-visto { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); padding: 3px 8px; font-size: 11px; border-radius: 5px; cursor: pointer; font-family: 'Sora', sans-serif; transition: background 0.15s; white-space: nowrap; }
   .btn-visto:hover { background: rgba(34,197,94,0.25); }
 
   /* ── PIN SCREEN ── */
@@ -3247,7 +3248,7 @@ function setPrice(ins, mes, nuevo, obs='') {
   ins.precios[mes] = nuevo;
 }
 
-const INPUT_STYLE = 'width:90px;background:var(--surface2);border:1.5px solid var(--accent);border-radius:5px;padding:3px 7px;color:var(--text);font-family:"DM Sans",sans-serif;font-size:13px;font-weight:500;outline:none;';
+const INPUT_STYLE = 'width:90px;background:var(--surface2);border:1.5px solid var(--accent);border-radius:5px;padding:3px 7px;color:var(--text);font-family:"Sora",sans-serif;font-size:13px;font-weight:500;outline:none;';
 
 function flashCell(id, cellIndex, cls) {
   const row = document.querySelector(`tr[data-id="${id}"]`);
@@ -4678,7 +4679,7 @@ function pfInlineEdit(cell, id, field) {
   input.type = 'number'; input.value = current;
   Object.assign(input.style, {
     width:'90px', background:'var(--bg)', border:'1px solid var(--accent)',
-    borderRadius:'5px', color:'var(--text)', fontFamily:'DM Sans,sans-serif',
+    borderRadius:'5px', color:'var(--text)', fontFamily:'Sora,sans-serif',
     fontSize:'13px', padding:'3px 7px', outline:'none'
   });
   cell.innerHTML = '';

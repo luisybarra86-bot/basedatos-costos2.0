@@ -1459,20 +1459,20 @@
         </div>
       </div>
 
-      <div class="chart-card" style="margin-bottom:24px">
-        <div class="card-title">Últimos insumos agregados</div>
+      <div class="chart-card" style="margin-bottom:24px;padding:0;overflow:hidden">
+        <div style="padding:16px 20px 12px">
+          <div class="card-title" style="margin-bottom:0">Últimos insumos agregados</div>
+        </div>
         <div style="overflow-y:auto;max-height:360px;">
           <table style="width:100%;border-collapse:collapse;">
-            <thead>
-              <tr>
-                <th>Insumo</th>
-                <th>Categoría</th>
-                <th>Sucursal</th>
-                <th style="text-align:right">Precio</th>
-                <th>Unidad</th>
-                <th>Agregado</th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th>Insumo</th>
+              <th>Categoría</th>
+              <th>Sucursal</th>
+              <th style="text-align:right">Precio</th>
+              <th>Unidad</th>
+              <th>Agregado</th>
+            </tr></thead>
             <tbody id="latestInsumosBody"></tbody>
           </table>
         </div>
@@ -1497,10 +1497,10 @@
 
       <div class="chart-card">
         <div class="card-title">
-          <span>Resumen variaciones</span>
+          Resumen variaciones
           <span id="varSummaryBadges" style="display:flex;gap:6px"></span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:0;max-height:320px;overflow-y:auto" id="varSummaryList"></div>
+        <div style="max-height:320px;overflow-y:auto" id="varSummaryList"></div>
       </div>
     </div>
 

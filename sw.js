@@ -1,4 +1,4 @@
-const CACHE = 'leno-costos-v1';
+const CACHE = 'leno-costos-v3';
 const SHELL = ['/', '/index.html', '/logo.png'];
 
 self.addEventListener('install', e => {

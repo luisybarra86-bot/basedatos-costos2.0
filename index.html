@@ -275,7 +275,28 @@
     margin-bottom: 24px;
   }
 
-  .card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+  .card-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title .card-chip {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(212,175,55,0.1);
+    border: 1px solid rgba(212,175,55,0.2);
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
 
   .chart-wrap { position: relative; height: 220px; }
 
@@ -822,9 +843,9 @@
   }
   .kpi-mover-icon { font-size: 28px; flex-shrink:0; }
   .kpi-mover-body { flex:1; min-width:0; }
-  .kpi-mover-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }
-  .kpi-mover-name { font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px; }
-  .kpi-mover-detail { font-size:12px; color:var(--muted); }
+  .kpi-mover-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; font-weight:700; margin-bottom:4px; }
+  .kpi-mover-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px; }
+  .kpi-mover-detail { font-size:11px; color:var(--muted); }
   .kpi-mover-pct {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 36px;
@@ -833,8 +854,8 @@
     letter-spacing: 1px;
   }
   .kpi-mover-prices { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
-  .kpi-mover-prev { font-size:12px; color:var(--muted); text-decoration:line-through; }
-  .kpi-mover-cur { font-size:16px; font-weight:600; }
+  .kpi-mover-prev { font-size:11px; color:var(--muted); text-decoration:line-through; }
+  .kpi-mover-cur { font-size:13px; font-weight:700; }
 
   /* ── THEME PICKER ── */
   .theme-picker {
@@ -1352,7 +1373,7 @@
       <div class="kpi-grid" id="kpiGrid"></div>
 
       <div class="chart-card">
-        <div class="card-title">Insumos por categoría <span id="catChartSuc" style="font-weight:400;font-size:11px;color:var(--muted)"></span></div>
+        <div class="card-title">Insumos por categoría <span id="catChartSuc" class="card-chip"></span></div>
         <div class="cat-layout">
           <div class="donut-wrap">
             <canvas id="catChart"></canvas>
@@ -1368,15 +1389,15 @@
       <div class="chart-card" style="margin-bottom:24px">
         <div class="card-title">Últimos insumos agregados</div>
         <div style="overflow-y:auto;max-height:360px;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <table style="width:100%;border-collapse:collapse;">
             <thead>
-              <tr style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">
-                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Insumo</th>
-                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Categoría</th>
-                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Sucursal</th>
-                <th style="padding:8px 12px;text-align:right;font-weight:600;border-bottom:1px solid var(--border)">Precio</th>
-                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Unidad</th>
-                <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)">Agregado</th>
+              <tr>
+                <th>Insumo</th>
+                <th>Categoría</th>
+                <th>Sucursal</th>
+                <th style="text-align:right">Precio</th>
+                <th>Unidad</th>
+                <th>Agregado</th>
               </tr>
             </thead>
             <tbody id="latestInsumosBody"></tbody>
@@ -1384,11 +1405,11 @@
         </div>
       </div>
 
-      <div class="table-wrap" style="margin-bottom:24px">
-        <div class="table-toolbar">
-          <span style="font-size:13px;font-weight:600">Mayores aumentos recientes</span>
+      <div class="chart-card" style="margin-bottom:24px;padding:0;overflow:hidden">
+        <div style="padding:16px 20px 12px">
+          <div class="card-title" style="margin-bottom:0">Mayores aumentos recientes</div>
         </div>
-        <table id="topChangesTable">
+        <table id="topChangesTable" style="width:100%;border-collapse:collapse">
           <thead><tr>
             <th>Insumo</th>
             <th>Categoría</th>
@@ -1402,7 +1423,7 @@
       </div>
 
       <div class="chart-card">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+        <div class="card-title">
           <span>Resumen variaciones</span>
           <span id="varSummaryBadges" style="display:flex;gap:6px"></span>
         </div>

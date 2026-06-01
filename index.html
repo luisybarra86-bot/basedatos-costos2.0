@@ -359,19 +359,15 @@
   .cat-card:hover { background: rgba(128,128,128,0.06); }
 
   .cat-dot {
-    width: 24px; height: 24px;
-    border-radius: 6px;
-    background: var(--cat-color);
-    opacity: 0.18;
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--cat-color) 20%, transparent);
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 15px;
   }
-
-  .cat-card .cat-dot { position: relative; }
-  .cat-card .cat-dot span { position: relative; opacity: 1; filter: none; }
 
   .cat-info { flex: 1; min-width: 0; }
 
@@ -2904,7 +2900,7 @@ function renderDashboard() {
       const icon = catIcons[c.label.trim().toUpperCase()] || '📦';
       const barW = Math.round((c.pct / maxPct) * 100);
       return `<div class="cat-card" style="--cat-color:${c.color}" onclick="goToInsumosByCategoria('${c.label.replace(/'/g,"\\'")}')">
-        <div class="cat-dot"><span style="font-size:12px">${icon}</span></div>
+        <div class="cat-dot">${icon}</div>
         <div class="cat-info">
           <div class="cat-name">${c.label}</div>
           <div class="cat-bottom">

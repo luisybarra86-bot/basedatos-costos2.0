@@ -4458,6 +4458,7 @@ let pfState = {
   sortDir: 1,
   page: 1,
   perPage: 25,
+  sinVentaFilter: false,
 };
 let _pfSyncedHistIds = new Set();
 
@@ -4625,27 +4626,88 @@ function pfRenderKPIs() {
     ? `<div class="kpi-value" style="color:var(--red);font-size:18px;line-height:1.2;margin-bottom:2px">${mayorAumentoNombre}</div><div class="kpi-sub" style="color:var(--red)">+${mayorAumento.toFixed(1)}%</div>`
     : `<div class="kpi-value">—</div><div class="kpi-sub">Sin cambios este mes</div>`;
 
+  const sinVentaBadge = pfState.sinVentaFilter
+    ? `<span style="font-size:9px;background:rgba(91,141,238,0.2);color:var(--viandas);border-radius:10px;padding:1px 6px;margin-left:6px;font-weight:700">ACTIVO ✕</span>` : '';
+
   grid.innerHTML = `
-    <div class="kpi orange">
+    <div class="kpi orange" style="cursor:pointer" title="Ver todos los productos" onclick="pfKpiClick('total')">
       <div class="kpi-label">Total productos</div>
       <div class="kpi-value" style="color:var(--accent)">${total}</div>
       <div class="kpi-sub">en lista de precios</div>
     </div>
-    <div class="kpi red">
+    <div class="kpi red" style="cursor:pointer" title="Buscar este producto en la tabla" onclick="pfKpiClick('mayorAumento')">
       <div class="kpi-label">Mayor aumento del mes</div>
       ${mayorHTML}
     </div>
-    <div class="kpi blue">
-      <div class="kpi-label">Sin precio de venta</div>
+    <div class="kpi blue" style="cursor:pointer;${pfState.sinVentaFilter?'outline:2px solid var(--viandas);':''}" title="${pfState.sinVentaFilter?'Clic para quitar filtro':'Filtrar productos sin precio de venta'}" onclick="pfKpiClick('sinVenta')">
+      <div class="kpi-label">Sin precio de venta ${sinVentaBadge}</div>
       <div class="kpi-value" style="color:var(--viandas)">${sinVenta}</div>
       <div class="kpi-sub">${sinVenta ? 'requieren actualización' : 'todos completos ✓'}</div>
     </div>
-    <div class="kpi green">
+    <div class="kpi green" style="cursor:pointer" title="Ver historial de cambios" onclick="pfKpiClick('historial')">
       <div class="kpi-label">Última actualización</div>
       <div class="kpi-value" style="color:var(--green);font-size:22px">${ultimaFecha}</div>
       <div class="kpi-sub">${pfState.historial.length} cambios registrados</div>
     </div>
   `;
+}
+
+function pfKpiClick(tipo) {
+  const tableWrap = document.querySelector('#view-preciosFranquicia .table-wrap');
+  const histPanel = document.getElementById('pfHistPanel');
+
+  if (tipo === 'total') {
+    // Limpiar filtros y bajar a la tabla
+    pfState.sinVentaFilter = false;
+    document.getElementById('pfSearch').value = '';
+    document.getElementById('pfCatFilter').value = '';
+    pfState.page = 1;
+    pfRenderTable();
+    pfRenderKPIs();
+    tableWrap?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } else if (tipo === 'mayorAumento') {
+    // Buscar el producto con mayor aumento en la tabla
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    let mayorAumento = null, mayorNombre = '';
+    pfState.historial
+      .filter(h => {
+        if (!h.fecha) return false;
+        const parts = h.fecha.split('/').map(Number);
+        return parts[1] - 1 === mesActual && parts[2] === añoActual;
+      })
+      .forEach(h => {
+        if (!h.precioAnterior || !h.precioNuevo) return;
+        const p = ((h.precioNuevo - h.precioAnterior) / h.precioAnterior * 100);
+        if (mayorAumento === null || p > mayorAumento) { mayorAumento = p; mayorNombre = h.nombre; }
+      });
+    if (mayorNombre) {
+      pfState.sinVentaFilter = false;
+      pfState.page = 1;
+      document.getElementById('pfSearch').value = mayorNombre;
+      document.getElementById('pfCatFilter').value = '';
+      pfRenderTable();
+      pfRenderKPIs();
+      tableWrap?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+  } else if (tipo === 'sinVenta') {
+    // Toggle filtro sin precio de venta
+    pfState.sinVentaFilter = !pfState.sinVentaFilter;
+    document.getElementById('pfSearch').value = '';
+    document.getElementById('pfCatFilter').value = '';
+    pfState.page = 1;
+    pfRenderTable();
+    pfRenderKPIs();
+    tableWrap?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (pfState.sinVentaFilter) toast('Mostrando productos sin precio de venta', 'info');
+
+  } else if (tipo === 'historial') {
+    // Scroll al panel de historial
+    histPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 function pfRenderHistPanel() {
@@ -4689,7 +4751,8 @@ function pfRenderTable() {
   let items = pfState.productos.filter(p => {
     const matchSearch = !search || (p.nombre||'').toLowerCase().includes(search) || (p.categoria||'').toLowerCase().includes(search);
     const matchCat = !cat || p.categoria === cat;
-    return matchSearch && matchCat;
+    const matchSinVenta = !pfState.sinVentaFilter || !p.precioVenta;
+    return matchSearch && matchCat && matchSinVenta;
   });
 
   items.sort((a, b) => {

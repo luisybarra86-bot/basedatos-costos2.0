@@ -170,16 +170,37 @@
   }
 
   .topbar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
-    padding: 14px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     position: sticky;
     top: 0;
     z-index: 50;
+    padding: 0 28px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+    background: #ffffff;
+    border-bottom: none;
+  }
+  /* Toro a la derecha */
+  .topbar::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url('logoleno.jpg');
+    background-size: auto 100%;
+    background-position: right center;
+    background-repeat: no-repeat;
+    background-color: #ffffff;
+    z-index: 0;
+  }
+  /* Franja de cuadros abajo */
+  .topbar::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 18px;
+    background: repeating-conic-gradient(#e8001e 0% 25%, #ffffff 0% 50%);
+    background-size: 18px 18px;
+    z-index: 1;
   }
 
   .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--text); }
@@ -1422,23 +1443,22 @@
 <main class="main">
 
   <div class="topbar">
-    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú">☰</button>
-    <div>
-      <div class="page-title" id="pageTitle">DASHBOARD</div>
-      <div class="page-sub" id="pageSub">Vista general de costos</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px">
-      <img id="topbarLogo" src="logo.png" width="44" height="44" style="border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">
-      <div style="width:1px;height:32px;background:#252a38;flex-shrink:0"></div>
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú" style="position:relative;z-index:2;color:#1a1d26"></button>
+    <!-- Logo circular con aro dorado -->
+    <div style="position:relative;z-index:2;display:flex;align-items:center;gap:14px">
+      <div style="position:relative;width:48px;height:48px;flex-shrink:0">
+        <div style="position:absolute;inset:-2px;border-radius:50%;background:linear-gradient(135deg,#d4af37,#f5d76e,#b8963a);z-index:0"></div>
+        <div style="position:absolute;inset:0;border-radius:50%;background:#fff;z-index:1;margin:2px"></div>
+        <img src="logo.png" width="44" height="44" style="position:relative;z-index:2;border-radius:50%;object-fit:cover;width:100%;height:100%" onerror="this.style.display='none'">
+      </div>
+      <div style="width:1px;height:32px;background:rgba(0,0,0,0.15);flex-shrink:0"></div>
       <div id="weatherWidget">
-        <span class="w-time" id="wTime">--:--</span>
-        <span class="w-clima" id="wClima">· Tucumán</span>
-      </div>
-      <div style="width:1px;height:32px;background:#252a38;flex-shrink:0"></div>
-      <div class="topbar-actions" id="topbarActions">
-        <button class="btn btn-ghost" onclick="exportAllExcel()">⬇️ Exportar Excel</button>
+        <span class="w-time" id="wTime" style="color:#1a1d26">--:--</span>
+        <span class="w-clima" id="wClima" style="color:#6b7488">· Tucumán</span>
       </div>
     </div>
+    <!-- Acciones por vista (oculto del topbar, se mueven a la toolbar) -->
+    <div id="topbarActions" style="display:none"></div>
   </div>
 
   <div class="content">

@@ -62,27 +62,16 @@
   }
 
   .sidebar-logo {
-    padding: 24px 20px 16px;
+    padding: 20px 20px 16px;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
   }
 
-  .logo-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 30px;
-    letter-spacing: 4px;
-    background: linear-gradient(135deg, #d4af37 0%, #f5d76e 60%, #d4af37 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1;
-  }
-
-  .logo-sub {
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-top: 4px;
+  .logo-img {
+    max-height: 52px;
+    width: auto;
+    display: block;
   }
 
   .sidebar-section {
@@ -1375,8 +1364,7 @@
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-title">LENO</div>
-    <div class="logo-sub">Base de Datos Costos</div>
+    <img src="leno.png" alt="LENO" class="logo-img">
   </div>
 
   <div class="sidebar-section">
@@ -3363,7 +3351,7 @@ function setPrice(ins, mes, nuevo, obs='') {
     : getLastKnownPrice(ins, mes);
   // Always store precioAnterior directly on the insumo so it survives even without historial
   if(anterior !== null && anterior !== undefined) ins.precioAnterior = anterior;
-  if(anterior !== nuevo) addHistEntry(ins, mes, anterior, nuevo, obs);
+  addHistEntry(ins, mes, anterior, nuevo, obs);
   ins.precios[mes] = nuevo;
 }
 
@@ -3432,7 +3420,7 @@ function startPriceEdit(td, id) {
 
   makeInlineInput(td, cur,
     (nuevo) => {
-      if (!isNaN(nuevo) && nuevo !== cur) {
+      if (!isNaN(nuevo)) {
         setPrice(ins, mes, nuevo);
         // Guardar el insumo directamente en Firestore ANTES del sync
         if (_fbOk) {
@@ -3447,7 +3435,7 @@ function startPriceEdit(td, id) {
         renderDashboard();
         flashCell(id, 0, trend === 'up' ? 'flash-red' : 'flash-green');
         const syncMsg = synced > 0 ? ` · sincronizado en ${synced} sucursal${synced > 1 ? 'es' : ''}` : '';
-        toast((trend === 'up' ? '▲ Precio aumentado' : trend === 'down' ? '▼ Precio bajó' : 'Sin cambio') + syncMsg,
+        toast((trend === 'up' ? '▲ Precio aumentado' : trend === 'down' ? '▼ Precio bajó' : 'Precio confirmado') + syncMsg,
               trend === 'up' ? 'error' : trend === 'down' ? 'success' : 'info');
       } else {
         td.textContent = fmt(cur);
@@ -4307,6 +4295,7 @@ const DARK_VARS = {
 
 function applyTheme(accentColor, isLight) {
   const root = document.documentElement;
+  root.dataset.mode = isLight ? 'light' : 'dark';
   const modeVars = isLight ? LIGHT_VARS : DARK_VARS;
   Object.entries(modeVars).forEach(([k,v]) => root.style.setProperty(k, v));
   root.style.setProperty('--accent', accentColor);
@@ -4367,6 +4356,7 @@ function loadSavedTheme() {
   }
   const accent = localStorage.getItem('leno_accent');
   const isLight = localStorage.getItem('leno_light') === '1';
+  document.documentElement.dataset.mode = isLight ? 'light' : 'dark';
   if(accent) applyTheme(accent, isLight);
   const track = document.getElementById('modeTrack');
   const label = document.getElementById('modeLabel');

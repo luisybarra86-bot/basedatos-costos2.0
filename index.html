@@ -66,12 +66,24 @@
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
+    justify-content: center;
   }
 
   .logo-img {
     max-height: 52px;
     width: auto;
     display: block;
+  }
+
+  .logo-sub-text {
+    font-family: 'Sora', sans-serif;
+    font-weight: 300;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    margin-top: 6px;
+    text-align: center;
   }
 
   .sidebar-section {
@@ -1363,8 +1375,9 @@
 <!-- SIDEBAR -->
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
+  <div class="sidebar-logo" style="flex-direction:column">
     <img src="leno.png" alt="LENO" class="logo-img">
+    <div class="logo-sub-text">Base de Datos Costos</div>
   </div>
 
   <div class="sidebar-section">
